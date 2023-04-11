@@ -1,0 +1,65 @@
+{
+    "ts_host": "127.0.0.1",
+    "ts_port": 8888,
+    "users": [
+        { "Neo": "P@ssw0rd!" },
+        { "c0z": "password" }
+    ],
+    "listeners": [
+        { 
+            "http": {
+                "name": "test_http1",
+                "hosts": [ "0.0.0.0:80" ],
+                "bind": "0.0.0.0",
+                "port": 80,
+                "secure": "false",
+                "rotation": "round-robin",
+                "user_agent": "",
+                "headers": [
+                    "Accept-Type: */*, charset: utf-8"
+                ],
+                "urls": [
+                ],
+                "cert": {
+                    "cert": "/home/c0z/Code/havoc_random_profile/test.json",
+                    "key": "/home/c0z/Code/havoc_random_profile/test.json"
+                },
+                "proxy": {
+                    "host": "0.0.0.0",
+                    "port": "8234",
+                    "user": "user",
+                    "pass": "pass"
+                },
+                "response": {
+                }
+            } 
+        },
+        { 
+            "http": {
+                "name": "test_http1",
+                "hosts": [ "0.0.0.0:443" ],
+                "bind": "0.0.0.0",
+                "port": 443
+            }
+        },
+        { 
+            "smb": {
+            }
+        },
+        {
+            "external": {
+            }
+        }
+    ],
+    "service": {
+        "endpoint": "service-endpoint",
+        "password": "service-password"
+    },
+    "demon": {
+        "sleep": 20,
+        "injection": {
+            "spawn32": "",
+            "spawn64": ""
+        }
+    }
+}
