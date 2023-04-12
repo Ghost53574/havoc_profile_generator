@@ -54,7 +54,7 @@ Faker = Factory.create
 fake = Faker()
 
 search_path = os.environ['PATH']
-windows_dir_root = "C:\\Windows"
+windows_dir_root = "C:\\\\Windows"
 windows_dir_sysnative = "\\sysnative"
 windows_dir_syswow64 = "\\syswow64"
 
@@ -661,11 +661,11 @@ class Injection(Base):
 
     def Random(self, arch) -> str:
         if arch == self.ARCH_X64:
-            windows_dir = f"{windows_dir_root}{windows_dir_sysnative}"
+            windows_dir = f"{windows_dir_root}\\{windows_dir_sysnative}\\"
         elif arch == self.ARCH_X86:
-            windows_dir = f"{windows_dir_root}{windows_dir_sysnative}"
+            windows_dir = f"{windows_dir_root}\\{windows_dir_sysnative}\\"
         elif arch == self.ARCH_SYSWOW:
-            windows_dir = f"{windows_dir_root}{windows_dir_syswow64}"
+            windows_dir = f"{windows_dir_root}\\{windows_dir_syswow64}\\"
         else:
             return None
         
@@ -1120,10 +1120,10 @@ class Writer(Base):
         Name         = "{listener_name}"
         Port         = {listener_port}
         Hosts        = {listener_hosts}
-        HostBind     = {listener_bind}
-        HostRotation = {listener_rotation}
+        HostBind     = "{listener_bind}"
+        HostRotation = "{listener_rotation}"
         Secure       = {listener_secure}
-        UserAgent    = {listener_user_agent}
+        UserAgent    = "{listener_user_agent}"
         Uris         = {listener_urls}
         Headers      = {listener_headers}
 '''
@@ -1137,10 +1137,10 @@ class Writer(Base):
                     if listener_proxy:
                         listener_block += f'''
         Proxy {{
-            Host = {listener_proxy["Host"]}
+            Host = "{listener_proxy["Host"]}"
             Port = {listener_proxy["Port"]}
-            Username = {listener_proxy["Username"]}
-            Password = {listener_proxy["Password"]}
+            Username = "{listener_proxy["Username"]}"
+            Password = "{listener_proxy["Password"]}"
         }}
 '''
                     listener_block += f'''
@@ -1154,15 +1154,15 @@ class Writer(Base):
                     listener_block += f'''
     Smb {{
         Name     = "{listener_name}"
-        Pipename = "{listener_smb_pipename}"
+        PipeName = "{listener_smb_pipename}"
     }}
 '''
                 elif listener_type == "External":
                     listener_ext_endpoint = listener[listener_type].get("Endpoint")
                     listener_block += f'''
     External {{
-        Name      = {listener_name}
-        Endpoint  = {listener_ext_endpoint}
+        Name      = "{listener_name}"
+        Endpoint  = "{listener_ext_endpoint}"
     }}
 '''
         listener_block += "}\n"
@@ -1195,6 +1195,7 @@ class Writer(Base):
         if service_block:
             profile_block += service_block
         profile_block += demon_block
+        profile_block = profile_block.replace("\'", "\"")
         
         if self.filename:
             with open(self.filename, 'w') as f:
