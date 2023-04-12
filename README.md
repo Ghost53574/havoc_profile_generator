@@ -19,4 +19,4 @@ script that generates profiles, which is just text. So don't shoot the messenger
 
 Have fun!
 
-* Any support is welcome *
+*Any support is welcome*
