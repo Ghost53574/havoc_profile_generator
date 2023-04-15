@@ -1,0 +1,22 @@
+{
+    "Request": [
+        "/pki/mscorp/cps/deffault.htm",
+        "/pki/mscorp/crl/msitwww1.crl"
+    ],
+    "Response": [
+        "Content-Type: text/html",
+        "x-ms-version: 2009-09-19",
+        "x-ms-lease-status: unlocked",
+        "x-ms-blob-type: BlockBlob",
+        "Vary: Accept-Encoding",
+        "Connection: close",
+        "TLS_version: tls1.2",
+        "Strict-Transport-Security: max-age-315360000",
+        "X-RTag: RT"
+    ],
+    "Headers": [
+        "Accept: text/html,application/xhtml+xml,applicaiton/xml;q=0.9,*/*,q=0.8",
+        "Accept-Language: en-US,en;q=0.5",
+        "Connection: close"
+    ]
+}

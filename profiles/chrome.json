@@ -1,0 +1,27 @@
+{
+    "Request": [
+        "/async/newtab_promos",
+        "/aysnc/newtab_ogb",
+        "/async/ddljson",
+        "/service/update2/json",
+        "/gen_204"
+    ],
+    "Response": [
+        "Version: 420932473",
+        "Content-Type: application/json; charset=UTF-8",
+        "X-Content-Type-Options: nosniff",
+        "Strict-Transport-Security: max-age-315360000",
+        "Bfcache-Opt-In: unload",
+        "Server: gws",
+        "Cache-Control: private",
+        "X-Xss-Protection: 0",
+        "X-Frame-Options: SAMEORIGIN"
+    ],
+    "Headers": [
+        "Host: www.google.com",
+        "Sec-Fetch-Site: none",
+        "Sec-Fetch-Mode: no-cors",
+        "Sec-Fetch-Dest: empty",
+        "Accept-Language: en-US,en;q=0.5"
+    ]
+}

@@ -1,0 +1,29 @@
+{
+    "Request": [
+        "/owa/",
+        "/OWA/"
+    ],
+    "Response": [
+        "Cache-Control: no-cache",
+        "Pragma: no-cache",
+        "Content-Type: text/html; charset=utf-8",
+        "Server: Microsoft-IIS/10.0",
+        "request-id: 6cfcf35d-0680-4853-98c4-b16723708fc9",
+        "X-CalculatedBETarget: BY2PR06MB549.namprd06.prod.outlook.com",
+        "X-Content-Type-Options: nosniff",
+        "X-OWA-Version: 15.1.1240.20",
+        "X-OWA-OWSVersion: V2017_06_15",
+        "X-OWA-MinimumSupportedOWSVersion: V2_6",
+        "X-Frame-Options: SAMEORIGIN",
+	    "X-DiagInfo: BY2PR06MB549",
+	    "X-UA-Compatible: IE=EmulateIE7",
+	    "X-Powered-By: ASP.NET",
+	    "X-FEServer: CY4PR02CA0010",
+	    "Connection: close"
+    ],
+    "Headers": [
+        "Host: www.outlook.live.com",
+        "Accept: */*",
+        "Cookie: MicrosoftApplicationsTelemetryDeviceId=95c18d8-4dce9854;ClientId=1C0F6C5D910F9;MSPAuth=3EkAjDKjI;xid=730bf7;wla42=ZG0yMzA2KjEs"
+    ]
+}

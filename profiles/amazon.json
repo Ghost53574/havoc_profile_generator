@@ -1,0 +1,25 @@
+{
+    "Request": [
+        "/broadcast",
+        "/1/events/com.amazon.csm.csa.prod"
+    ],
+    "Response": [
+        "Content-Type: application/json",
+        "Access-Control-Allow-Origin: https://amazon.com",
+        "Access-Control-Allow-Methods: GET",
+        "Access-Contorl-Allow-Credentials: true",
+        "X-AMZ-Version-Id: null",
+        "Server: AmazonS3",
+        "X-Cache: Hit from cloudfront"
+    ],
+    "Headers": [
+        "Accept: application/json, text/plain, */*",
+        "Accept-Language: en-US,en;q=0.5",
+        "Origin: https://ww.amazon.com",
+        "Referer: https://www.amazon.com",
+        "Sec-Fetch-Dest: empty",
+        "Sec-Fetch-Mode: cors",
+        "Sec-Fetch-Site: cross-site",
+        "Te: trailers"
+    ]
+}
