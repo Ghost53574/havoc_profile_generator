@@ -1,0 +1,2 @@
+pyMalleableProfileParser==0.3.3
+faker==18.4.0 
