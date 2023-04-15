@@ -1,14 +1,14 @@
 #!/usr/bin/python3
 
-import os
-import time
-import random
 from faker.factory import Factory
-import json
 import ipaddress
-import uuid
-import sys
 import argparse
+import random
+import uuid
+import json
+import os
+import sys
+import mpp
 
 HEADER = '\033[95m'
 OKBLUE = '\033[94m'
@@ -53,17 +53,20 @@ BANNER = '''
 Faker = Factory.create
 fake = Faker()
 
+profile_dir = "profiles"
 search_path = os.environ['PATH']
 windows_dir_root = "C:\\\\Windows"
-windows_dir_sysnative = "\\sysnative"
-windows_dir_syswow64 = "\\syswow64"
+windows_dir_sysnative = "\\System32"
+windows_dir_syswow64 = "\\SysWow64"
 
 # Default profile settings
 all_interfaces = "0.0.0.0"
 localhost = "127.0.0.1"
 default_port = 40056
 default_user_agent = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36"
-default_headers = [ "Content-type: text/plain; charset=utf-8", "Connection: keep-alive", "Cache-control: non-cache" ]
+default_response = [ "Content-type: text/plain; charset=utf-8", "Connection: keep-alive", "Cache-control: non-cache" ]
+default_headers = [ "Content-type: text/plain; charset=utf-8", "Accept-Language: en-US" ]
+default_urls = [ "/images/dog.jpg", "/images/cat.jpg", "/images/dolphin.jpg" ]
 
 # Default files needed
 default_compiler_x64 = "x86_64-w64-mingw32-gcc"
@@ -108,170 +111,7 @@ default_pipenames = [
     "tcppipe"
 ]
 
-amazon_profile = {
-    "Request": [
-        "/broadcast",
-        "/1/events/com.amazon.csm.csa.prod"
-    ],
-    "Response": [
-        "Content-Type: application/json",
-        "Access-Control-Allow-Origin: https://amazon.com",
-        "Access-Control-Allow-Methods: GET",
-        "Access-Contorl-Allow-Credentials: true",
-        "X-AMZ-Version-Id: null",
-        "Server: AmazonS3",
-        "X-Cache: Hit from cloudfront"
-    ],
-    "Headers": [
-        "Accept: application/json, text/plain, */*",
-        "Accept-Language: en-US,en;q=0.5",
-        "Origin: https://ww.amazon.com",
-        "Referer: https://www.amazon.com",
-        "Sec-Fetch-Dest: empty",
-        "Sec-Fetch-Mode: cors",
-        "Sec-Fetch-Site: cross-site",
-        "Te: trailers"
-    ]
-}
-    
-bing_maps_profile = {
-    "Request": [
-        "/maps/overlaybfpr",
-        "/fd/ls/lsp.aspx"
-    ],
-    "Response": [
-        "Cache-Control: public",
-        "Content-Type: text/html;charset=utf-8",
-        "Vary: Accept-Encoding",
-        "P3P: \"NON UNI COM NAV STA LOC CURa DEVa PSAa PSDa OUR IND\"",
-        "X-MSEdge-Ref: Ref A: 20D7023F4A1946FEA6E17C00CC8216CF Ref B: DALEDGE0715",
-        "Connection", "close"
-    ],
-    "Headers": [
-        "Host: www.bing.com",
-        "Accept: */*",
-        "Accept-Lanaguage: en-US,en;q=0.5",
-        "Connection: close"
-    ]
-}
-
-chrome_profile = {
-    "Request": [
-        "/async/newtab_promos",
-        "/aysnc/newtab_ogb",
-        "/async/ddljson",
-        "/service/update2/json",
-        "/gen_204"
-    ],
-    "Response": [
-        "Version: 420932473",
-        "Content-Type: application/json; charset=UTF-8",
-        "X-Content-Type-Options: nosniff",
-        "Strict-Transport-Security: max-age-315360000",
-        "Bfcache-Opt-In: unload",
-        "Server: gws",
-        "Cache-Control: private",
-        "X-Xss-Protection: 0",
-        "X-Frame-Options: SAMEORIGIN"
-    ],
-    "Headers": [
-        "Host: www.google.com",
-        "Sec-Fetch-Site: none",
-        "Sec-Fetch-Mode: no-cors",
-        "Sec-Fetch-Dest: empty",
-        "Accept-Language: en-US,en;q=0.5"
-    ]
-}
-
-mscrl_profile = {
-    "Request": [
-        "/pki/mscorp/cps/deffault.htm",
-        "/pki/mscorp/crl/msitwww1.crl"
-    ],
-    "Response": [
-        "Content-Type: text/html",
-        "x-ms-version: 2009-09-19",
-        "x-ms-lease-status: unlocked",
-        "x-ms-blob-type: BlockBlob",
-        "Vary: Accept-Encoding",
-        "Connection: close",
-        "TLS_version: tls1.2",
-        "Strict-Transport-Security: max-age-315360000",
-        "X-RTag: RT"
-    ],
-    "Headers": [
-        "Accept: text/html,application/xhtml+xml,applicaiton/xml;q=0.9,*/*,q=0.8",
-        "Accept-Language: en-US,en;q=0.5",
-        "Connection: close"
-    ]
-}
-
-office365_profile = {
-    "Request": [
-        "/owa/",
-        "/OWA/"
-    ],
-    "Response": [
-        "Cache-Control: no-cache",
-        "Pragma: no-cache",
-        "Content-Type: text/html; charset=utf-8",
-        "Server: Microsoft-IIS/10.0",
-        "request-id: 6cfcf35d-0680-4853-98c4-b16723708fc9",
-        "X-CalculatedBETarget: BY2PR06MB549.namprd06.prod.outlook.com",
-        "X-Content-Type-Options: nosniff",
-        "X-OWA-Version: 15.1.1240.20",
-        "X-OWA-OWSVersion: V2017_06_15",
-        "X-OWA-MinimumSupportedOWSVersion: V2_6",
-        "X-Frame-Options: SAMEORIGIN",
-	    "X-DiagInfo: BY2PR06MB549",
-	    "X-UA-Compatible: IE=EmulateIE7",
-	    "X-Powered-By: ASP.NET",
-	    "X-FEServer: CY4PR02CA0010",
-	    "Connection: close"
-    ],
-    "Headers": [
-        "Host: www.outlook.live.com",
-        "Accept: */*",
-        "Cookie: MicrosoftApplicationsTelemetryDeviceId=95c18d8-4dce9854;ClientId=1C0F6C5D910F9;MSPAuth=3EkAjDKjI;xid=730bf7;wla42=ZG0yMzA2KjEs"
-    ]
-}
-
-jquery_profile  = {
-    "Request": [
-        "/js/jquery-3.6.4.min.js?id=03824&id=1da4fj1lk&hash=e21f6f198354c8aa7c8bcd124f8c2522",
-        "/js/jquery-3.6.4.min.js?id=38453&id=34sffj1lk&hash=80edb45474b247159beb6735499b75e2",
-        "/js/jquery-3.6.4.min.js?id=00054&id=1a34fa2lk&hash=e77b0d7731987aeffd55a76ae9811ae7",
-        "/js/jquery-3.6.4.min.js?id=01336&id=a3d4jdsff&hash=ae00fc8fdf1401252b0df64f0d35f7d8",
-        "/js/jquery-3.6.4.min.js?id=08834&id=2dasd5fkk&hash=f4f32865c3ac181e0a5846c46e7117a6"
-    ],
-    "Response": [
-        "Content-type: text/plain, charset=utf-8",
-        "Connection: keep-alive",
-        "Cache-control: non-cache"
-    ],
-    "Headers": [
-        "Content-type: text/plain, charset=utf-8",
-        "Accept-Language: en-US"
-    ]
-}
-
-default_url_profiles = [
-    "amazon",
-    "bing_maps",
-    "chrome",
-    "mscrl",
-    "office365",
-    "jquery"
-]
-
-defualt_profile_list = {
-    "amazon": amazon_profile,
-    "bing_maps": bing_maps_profile,
-    "chrome": chrome_profile,
-    "mscrl": mscrl_profile,
-    "office365": office365_profile,
-    "jquery": jquery_profile,
-}
+loaded_profiles_data = {}
 
 # Flags
 SYSNATIVE=False
@@ -317,6 +157,28 @@ def generate_pipename(process_name) -> str:
     else:
         return None
     return pipename
+
+def get_random_port(port = None) -> int:
+    if not port:
+        return random.choice(range(1025, 65534))
+    else:
+        return port
+    
+def load_profiles() -> list:
+    if not os.path.isdir(profile_dir):
+        return None
+    for root, _, files in os.walk(profile_dir):
+        loaded_profiles = files
+    temp = []
+    for f in loaded_profiles:
+        if os.path.isfile(f"{profile_dir}/{f}"):
+            name = f.split(".")[0]
+            profile_data = ""
+            with open(f"{profile_dir}/{f}", "r") as fe:
+                profile_data = json.loads(fe.read())
+            temp.append(name)
+            loaded_profiles_data[name] = profile_data
+    return temp
 
 def Find(name, _search_path = None):
     if _search_path:
@@ -497,7 +359,7 @@ class Response(Base):
 class Http_Listener(Cert, Base):
     host_rotation_types = [ "random", "round-robin" ]
     def __init__(self, name, hosts, port, host_bind, 
-                 host_rotation, user_agent, headers, urls, secure, 
+                 host_rotation = None, user_agent = None, headers = None, urls = None, secure = None, 
                  cert: Cert = None, proxy: Proxy = None, response: Response = None) -> None:
         self.name = name
         self.hosts = hosts
@@ -528,13 +390,18 @@ class Http_Listener(Cert, Base):
             self.urls = urls
         else:
             self.urls = [ "/" ]
-        self.secure = secure
+        if not secure:
+            self.secure = secure
+        else:
+            self.secure = "false"
         if cert:
             self.cert = cert
         if proxy:
             self.proxy = proxy
         if response:
             self.reponse = response
+        else:
+            self.reponse = Response(default_headers)
 
     def Print(self) -> dict:
         template = {}
@@ -639,25 +506,39 @@ class Injection(Base):
     ARCH_X64 = "x64"
     ARCH_SYSWOW = "x86_64"
 
-    def __init__(self, spawn_x64 = None, spawn_x86 = None) -> None:
-        syswow_binary = self.Random(self.ARCH_SYSWOW)
-        sysnative_binary = self.Random(self.ARCH_X64)
+    def __init__(self, spawn_x64 = None, spawn_x86 = None, arch = None) -> None:
+        self.sysnative_binary = None
+        self.syswow_binary = None
+
+        if arch == "both":
+            self.syswow_binary = self.Random(self.ARCH_SYSWOW)
+            self.sysnative_binary = self.Random(self.ARCH_X64)
+        elif arch == "x64":
+            self.sysnative_binary = self.Random(self.ARCH_X64)
+        elif arch == "x86":
+            self.sysnative_binary = self.Random(self.ARCH_X86)
+        else:
+            self.sysnative_binary = self.Random(self.ARCH_X86)
 
         if spawn_x64:
             self.spawn_x64 = spawn_x64
         else:
-            if not SYSNATIVE:
-                self.spawn_x64 = syswow_binary
+            if not SYSNATIVE and arch == "both":
+                self.spawn_x64 = self.syswow_binary
+            elif not SYSNATIVE and arch == "x64":
+                self.spawn_x64 = self.sysnative_binary
             else:
-                self.spawn_x64 = sysnative_binary
+                self.spawn_x64 = self.sysnative_binary
 
         if spawn_x86:
             self.spawn_x86 = spawn_x86
         else:
-            if not SYSNATIVE:
-                self.spawn_x86 = syswow_binary
+            if not SYSNATIVE and arch == "both":
+                self.spawn_x86 = self.syswow_binary
+            elif not SYSNATIVE and arch == "x86":
+                self.spawn_x86 = self.sysnative_binary
             else:
-                self.spawn_x86 = sysnative_binary
+                self.spawn_x86 = self.sysnative_binary
 
     def Random(self, arch) -> str:
         if arch == self.ARCH_X64:
@@ -785,33 +666,40 @@ class Generator(Teamserver, Operators, Listeners, Demon, Service):
         return self
     
 class Profile():
-    def __init__(self, quiet, profile = None, config = None) -> object:
+    def __init__(self, quiet, profiles, profile = None, config = None, host = None, port = None, hosts = None, arch = None) -> object:
         self.profile = None
-        self.randomize = False
         self.config = None
+
+        operator_block = None
+        listeners_block = None
+        service_block = None
+        demon_block = None
 
         print_good("Generating profile")
 
         if profile:
             self.profile = profile
         else:
-            self.profile = random.choice(default_url_profiles)
-        if randomize:
-            self.randomize = True
+            self.profile = random.choice(profiles)
 
         if config:
             self.config = json.loads("".join(config))
+            teamserver_host = self.config.get("ts_host")
+            teamserver_port = self.config.get("ts_port")
+            build_compiler_x64 = self.config.get("compiler_x64")
+            build_compiler_x86 = self.config.get("compiler_x86")
+            build_assembler = self.config.get("assembler")
 
-        teamserver_host = self.config.get("ts_host")
-        teamserver_port = self.config.get("ts_port")
-        build_compiler_x64 = self.config.get("compiler_x64")
-        build_compiler_x86 = self.config.get("compiler_x86")
-        build_assembler = self.config.get("assembler")
-
-        operator_block = self.config.get("users")
-        listeners_block = self.config.get("listeners")
-        service_block = self.config.get("service")
-        demon_block = self.config.get("demon")
+            operator_block = self.config.get("users")
+            listeners_block = self.config.get("listeners")
+            service_block = self.config.get("service")
+            demon_block = self.config.get("demon")
+        else:
+            teamserver_host = localhost
+            teamserver_port = get_random_port()
+            build_compiler_x64 = default_compiler_x64
+            build_compiler_x86 = default_compiler_x86
+            build_assembler = default_assembler
 
         if not teamserver_host and not teamserver_port:
             teamserver_host = localhost
@@ -827,6 +715,7 @@ class Profile():
             build_compiler_x64 = default_compiler_x64
         elif build_compiler_x64 and not build_compiler_x86:
             build_compiler_x86 = default_compiler_x86
+
         if not build_assembler:
             build_assembler = default_assembler
 
@@ -875,7 +764,7 @@ Build options:
         print_good("Generated Operators")
 
         if not profile or profile == "any":
-            selected_profile = random.choice(default_url_profiles)
+            selected_profile = random.choice(profiles)
         elif profile == "none":
             selected_profile = None
             profile_data = None
@@ -883,14 +772,95 @@ Build options:
             selected_profile = profile
 
         if selected_profile:
-            profile_data = defualt_profile_list[selected_profile]
+            profile_data = loaded_profiles_data[selected_profile]
         else:
             print_warn("No profile selected, using config data")
 
+        profile_request = None
+        profile_response = None
+        profile_headers = None
+
+        if profile_data:
+            profile_request = profile_data.get("Request")
+            profile_response = profile_data.get("Response")
+            profile_headers = profile_data.get("Headers")
+
         listeners = Listeners()
 
-        if not listeners:
-            print_fail("No listener block defined in config")
+        if not listeners_block:
+            if not quiet:
+                print_good("Loading random listeers")
+            if not hosts:
+                temp = []
+                number_hosts = random.choice(range(1, 20))
+                for i in range(number_hosts):
+                    temp.append(fake.ipv4())
+                hosts = temp
+            else:
+                temp = []
+                try:
+                    number_hosts = len(hosts.split(","))
+                except:
+                    number_hosts = 1
+                if number_hosts > 1:
+                    for host in hosts.split(","):
+                        temp.append(host)
+                else:
+                    temp = [ hosts ]
+                hosts = temp
+            if not port:
+                port = get_random_port()
+            if not host:
+                host = all_interfaces
+            name = "Http"
+            uesr_agent = fake.user_agent()
+            http_listener = Http_Listener(name, hosts, port, host, None, uesr_agent,
+                                          default_headers, default_urls, "false", 
+                                          None, None, None)
+            listeners.Add_Http_Listener(http_listener)
+            if not quiet:
+                print_warn(f"""
+    name:       {http_listener.name}
+    port:       {http_listener.port}
+    hosts:      {http_listener.hosts}
+    bind:       {http_listener.host_bind}
+    rotation:   {http_listener.host_rotation}
+    user agent: {http_listener.user_agent}
+    headers:    {http_listener.headers}
+    urls:       {http_listener.urls}
+    secure:     {http_listener.secure}
+    cert:       None
+    proxy:      None
+    response:   {http_listener.reponse}
+""")
+            name = "Agent Listener - HTTP/s"
+            uesr_agent = fake.user_agent()
+            https_listener = Http_Listener(name, hosts, "443", host, None, uesr_agent,
+                                          default_headers, default_urls, "true", 
+                                          None, None, None)
+            listeners.Add_Http_Listener(https_listener)
+            if not quiet:
+                print_warn(f"""
+    name:       {https_listener.name}
+    port:       {https_listener.port}
+    hosts:      {https_listener.hosts}
+    bind:       {https_listener.host_bind}
+    rotation:   {https_listener.host_rotation}
+    user agent: {https_listener.user_agent}
+    headers:    {https_listener.headers}
+    urls:       {https_listener.urls}
+    secure:     {https_listener.secure}
+    cert:       None
+    proxy:      None
+    response:   {https_listener.reponse}
+""")
+            smb_listener = Smb_Listener("Pivot - Smb")
+            listeners.Add_Smb_Listener(smb_listener)
+            if not quiet:
+                print_warn(f"""
+    name:       {smb_listener.name}
+    namepipe:   {smb_listener.pipename}
+""")
         else:
             for listener in listeners_block:
                 for listener_type in listener.keys():
@@ -904,17 +874,31 @@ Build options:
                             print_warn(f"Type: {listener_type}")
                         listener_hosts = listener[listener_type].get("hosts")
                         if not listener_hosts:
-                            temp = []
-                            number_hosts = random.choice(range(1, 20))
-                            for i in number_hosts:
-                                temp.append(fake.ipv4())
-                            listener_hosts = temp
+                            if not hosts:
+                                temp = []
+                                number_hosts = random.choice(range(1, 20))
+                                for i in range(number_hosts):
+                                    temp.append(fake.ipv4())
+                                listener_hosts = temp
+                            else:
+                                temp = []
+                                try:
+                                    number_hosts = len(hosts.split(","))
+                                except:
+                                    number_hosts = 1
+                                if number_hosts > 1:
+                                    for host in hosts.split(","):
+                                        temp.append(host)
+                                else:
+                                    temp = [ hosts ]
+
+                                listener_hosts = temp
                         listener_bind = listener[listener_type].get("bind")
                         if not listener_bind:
                             listener_bind = all_interfaces
                         listener_port = listener[listener_type].get("port")
                         if not listener_port:
-                            listener_port = random.choice(range(1025, 65534))
+                            listener_port = get_random_port()
                         listener_rotation = listener[listener_type].get("rotation")
                         if not listener_rotation:
                             listener_rotation = random.choice([ "random", "round-robin" ])
@@ -922,11 +906,11 @@ Build options:
                         if not listener_user_agent:
                             listener_user_agent = fake.user_agent()
                         listener_headers = listener[listener_type].get("headers")
-                        if profile_data and not listener_headers:
-                            listener_headers = profile_data["Headers"]
+                        if profile_headers and not listener_headers:
+                            listener_headers = profile_headers
                         listener_urls = listener[listener_type].get("urls")
-                        if profile_data and not listener_urls:
-                            listener_urls = profile_data["Request"]
+                        if profile_request and not listener_urls:
+                            listener_urls = profile_request
                         listener_secure = listener[listener_type].get("secure")
                         if not listener_secure:
                             listener_secure = random.choice([ "true", "false" ])
@@ -948,8 +932,8 @@ Build options:
                             listener_proxy = Proxy(listener_proxy_host, listener_proxy_port, 
                                                    listener_proxy_user, listener_proxy_pass)
                         listener_response = listener[listener_type].get("response")
-                        if profile_data and not listener_response:
-                            listener_response = profile_data["Response"]
+                        if profile_response and not listener_response:
+                            listener_response = profile_response
                         response = Response(listener_response)
                         listeners.Add_Http_Listener(Http_Listener(listener_name, 
                                         listener_hosts, listener_port,
@@ -993,11 +977,10 @@ Build options:
                     else:
                         print_warn(f"Listener {listener_type} is not available")
 
-        print_good("Creating optional service block")
-
         if not service_block:
             service = None
         else:
+            print_good("Creating optional service block")
             service_endpoint = dict(service_block).get("endpoint")
             service_password = dict(service_block).get("password")
             if not service_endpoint:
@@ -1014,12 +997,23 @@ Build options:
     endpoint: {service_endpoint}
     password: {service_password}
                     """)
-                service = Service(service_endpoint, service_password)
+                service = Service(endpoint=service_endpoint, password=service_password)
 
         print_good("Creating a demon :)")
             
         if not demon_block:
-            pass
+            injection = Injection(None, None, arch)
+            sleep = random.choice(range(12, 60))
+            jitter = random.choice(range(5, 70))
+            demon = Demon(sleep=sleep, jitter=jitter, injection=injection)
+            if not quiet:
+                print("")
+                print_warn(f"""Demon:
+    sleep:    {sleep}
+    jitter:   {jitter}
+    spawn32:  {injection.spawn_x86}
+    spawn64:  {injection.spawn_x64}
+            """)
         else:
             demon_sleep = dict(demon_block).get("sleep")
             if not demon_sleep:
@@ -1033,7 +1027,9 @@ Build options:
             demon_spawn64 = dict(demon_block).get("injection")["spawn64"]
             if not demon_spawn64:
                 demon_spawn64 = None
-            demon_injection = Injection(demon_spawn64, demon_spawn32)
+            demon_injection = Injection(spawn_x64=demon_spawn64,
+                                        spawn_x86=demon_spawn32,
+                                        arch=arch)
             if not quiet:
                 print_warn(f"""Demon:
     sleep:    {demon_sleep}
@@ -1043,7 +1039,11 @@ Build options:
             """)
             demon = Demon(demon_sleep, demon_jitter, demon_injection)
         
-        self.generator = Generator(teamserver, operators, listeners, demon, service)
+        self.generator = Generator(teamserver=teamserver, 
+                                   operators=operators, 
+                                   listeners=listeners, 
+                                   demon=demon,
+                                   service=service)
         if self.generator:
             print_good("Generator complete")
         else:
@@ -1064,7 +1064,7 @@ class Writer(Base):
         teamserver = profile["Teamserver"]
         operators  = profile["Operators"]
         listeners  = profile["Listeners"]
-        service    = profile["Service"]
+        service    = profile.get("Service")
         demon      = profile["Demon"]
 
         teamserver_host = teamserver["Host"]
@@ -1114,7 +1114,7 @@ class Writer(Base):
                     listener_cert = listener[listener_type].get("Cert")
                     listener_proxy = listener[listener_type].get("Proxy")
                     listener_response = listener[listener_type].get("Response")
-                    listener_response = listener_response["Headers"]
+                    listener_response = listener_response.get("Headers")
                     listener_block += f'''
     {listener_type} {{
         Name         = "{listener_name}"
@@ -1167,15 +1167,21 @@ class Writer(Base):
 '''
         listener_block += "}\n"
 
-        service_endpoint = service["Endpoint"]
-        service_password = service["Password"]
+        if service:
+            service_endpoint = service["Endpoint"]
+            service_password = service["Password"]
 
-        if service_endpoint and service_password:
-            service_block = f"""Service {{
+            if service_endpoint and service_password:
+                service_block = f"""Service {{
     Endpoint = "{service_endpoint}"
     Password = "{service_password}"
 }}
 """
+            else:
+                service_block = None
+        else:
+            service_block = None
+
         demon_sleep = demon["Sleep"]
         demon_jitter = demon["Jitter"]
         demon_injection = demon["Injection"]
@@ -1204,19 +1210,25 @@ class Writer(Base):
             print(profile_block)
 
 if __name__ == "__main__":
+    loaded_profiles = load_profiles()
+
     parser = argparse.ArgumentParser(
             prog='Deploy',
             description='Deploy\'s scripts to servers with fabric2\'s ssh or pypsrp winrm via threading')
-    parser.add_argument('-c', '--config', type=argparse.FileType('r'), required=False, help='Set variables in the generated config')
+    parser.add_argument('-c', '--config', type=argparse.FileType('r'), required=False, help='Config file to use, don\' use a conifg file for a completely random profile')
     parser.add_argument('-l', '--list', type=str_to_bool, nargs='?', const=True, default=False, help='List supported profiles')
     parser.add_argument('-s', '--sysnative', type=str_to_bool, nargs='?', const=True, default=False, help='Only support sysnative for spawn to')
+    parser.add_argument('-a', '--arch', type=str, action='store', default="Nothing", help='Selected architecture between x86, x64 & x86_64')
     parser.add_argument('-p', '--profile', type=str, action='store', default="Nothing", help='Select a traffic profile')
+    parser.add_argument('-H', '--host', type=str, action='store', default="Nothing", help='The listeners ip')
+    parser.add_argument('-L', '--hosts', type=str, action='store', default="Nothing", help='The hosts array in the form of 10.0.0.1,10.0.0.2')
+    parser.add_argument('-P', '--port', type=str, action='store', default="Nothing", help='Select a traffic profile')
     parser.add_argument('-o', '--outfile', type=str, action='store', default="Nothing", help='Output file of the final Havoc C2 pofile')
     parser.add_argument('-q', '--quiet', type=str_to_bool, nargs='?', const=True, default=False, help='Do not show banner')
     args = parser.parse_args()
 
     def list_profiles() -> None:
-        for profile in default_url_profiles:
+        for profile in loaded_profiles:
             print_good(f"Profile: {profile}")
 
     if args.list:
@@ -1224,10 +1236,13 @@ if __name__ == "__main__":
         sys.exit(0)
 
     template = None
-    randomize = True
     outfile = None
     config = None
     profile = None
+    host = None
+    hosts = None
+    port = None
+    arch = None
 
     if not args.quiet:
         print(f"{BANNER}")
@@ -1236,6 +1251,18 @@ if __name__ == "__main__":
         profile = args.profile
     else:
         profile = "any"
+    
+    if args.arch != "Nothing":
+        arch = args.arch
+    
+    if args.host != "Nothing":
+        host = args.host
+
+    if args.hosts != "Nothing":
+        hosts = args.hosts
+
+    if args.port != "Nothing":
+        port = args.port
     
     if args.outfile != "Nothing":
         outfile = args.outfile
@@ -1255,8 +1282,15 @@ if __name__ == "__main__":
     profile:   {profile}
         """)
     
-    generated_profile = Profile(args.quiet, profile, config)
-    generated_profile = generated_profile.Print()
+    generated_profile = Profile(quiet=args.quiet,
+                                profiles=loaded_profiles,
+                                profile=profile,
+                                config=config,
+                                host=host,
+                                port=port,
+                                hosts=hosts,
+                                arch=arch)
 
     print_good(f"Saving profile to {outfile}")
-    Writer(outfile).Write(generated_profile)
+    
+    Writer(filename=outfile).Write(profile=generated_profile.Print())
