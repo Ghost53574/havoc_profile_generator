@@ -1213,8 +1213,8 @@ if __name__ == "__main__":
     loaded_profiles = load_profiles()
 
     parser = argparse.ArgumentParser(
-            prog='Deploy',
-            description='Deploy\'s scripts to servers with fabric2\'s ssh or pypsrp winrm via threading')
+            prog='Havoc profile generator',
+            description='Generate havoc c2 profiles with ease and randomness')
     parser.add_argument('-c', '--config', type=argparse.FileType('r'), required=False, help='Config file to use, don\' use a conifg file for a completely random profile')
     parser.add_argument('-l', '--list', type=str_to_bool, nargs='?', const=True, default=False, help='List supported profiles')
     parser.add_argument('-s', '--sysnative', type=str_to_bool, nargs='?', const=True, default=False, help='Only support sysnative for spawn to')
@@ -1222,7 +1222,7 @@ if __name__ == "__main__":
     parser.add_argument('-p', '--profile', type=str, action='store', default="Nothing", help='Select a traffic profile')
     parser.add_argument('-H', '--host', type=str, action='store', default="Nothing", help='The listeners ip')
     parser.add_argument('-L', '--hosts', type=str, action='store', default="Nothing", help='The hosts array in the form of 10.0.0.1,10.0.0.2')
-    parser.add_argument('-P', '--port', type=str, action='store', default="Nothing", help='Select a traffic profile')
+    parser.add_argument('-P', '--port', type=str, action='store', default="Nothing", help='Set the port for listeners to listen on')
     parser.add_argument('-o', '--outfile', type=str, action='store', default="Nothing", help='Output file of the final Havoc C2 pofile')
     parser.add_argument('-q', '--quiet', type=str_to_bool, nargs='?', const=True, default=False, help='Do not show banner')
     args = parser.parse_args()
