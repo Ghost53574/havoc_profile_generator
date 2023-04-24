@@ -1,9 +1,9 @@
 Havoc C2 profile generator is a python3 script that generates profiles to be used with the Havoc C2 Framework.
 
-There are six built in profiles copied from https://github.com/xx0hcd/Malleable-C2-Profiles as a base. You can
+There are six built in profiles copied from https://github.com/xx0hcd/Malleable-C2-Profiles as a base. You can 
 now parse Cobalt Strike profiles using this tool (I only need to add a couple of additional checks, but it works).
 
-The idea of the this generator was to make it extensable and to separate the parts of a profile out to make easy 
+The idea of this generator was to make it extensible and to separate the parts of a profile out to make easy 
 randomization if need be. The randomization works by leaving creating a block but leaving it empty as such:
 ```txt
 {
@@ -123,6 +123,7 @@ As always I am not responsible for anything done by this script or anyone using 
 script that generates profiles, which is just text. So don't shoot the messenger.
 
 ~~* Coming up next is using https://github.com/brett-fitz/pyMalleableProfileParser to dynamically parse Cobalt Strike profiles directly into usable Havoc prfoiles~~
+
 * Coming up next is updating this to use the latest push to the Havoc Framework and support versions (later)
 
 Have fun!
