@@ -42,7 +42,7 @@ Listeners {
         HostRotation = "round-robin"
         PortBind     =  80
         PortConn     =  80
-        Secure       =  true
+        Secure       =  false
         UserAgent    = "Mozilla/5.0 (Android 8.1.0; Mobile; rv:47.0) Gecko/47.0 Firefox/47.0"
         Uris         =  ["/owa/", "/OWA/"]
         Headers      =  ["Accept-Type: */*, charset: utf-8"]
