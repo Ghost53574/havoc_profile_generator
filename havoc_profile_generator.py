@@ -1,6 +1,4 @@
 #!/usr/bin/python3
-
-from faker.factory import Factory
 import ipaddress
 import argparse
 import random
@@ -8,7 +6,16 @@ import uuid
 import json
 import os
 import sys
+import math
+
+from faker.factory import Factory
+
 import mpp
+from mpp.options import Option
+from mpp.blocks import Block
+from mpp.constants import INVALID_OPTION, INVALID_TERMINATION_STATEMENT, INVALID_STATEMENT, INVALID_BLOCK, \
+    DATA_TRANSFORM_BLOCKS, PROFILE, TERMINATION_STATEMENTS
+from mpp.statements import Statement, HeaderParameter, StringReplace
 
 HEADER = '\033[95m'
 OKBLUE = '\033[94m'
@@ -108,7 +115,8 @@ default_pipenames = [
     "discord",
     "shellex",
     "pshost",
-    "tcppipe"
+    "tcppipe",
+    "ntsvcs"
 ]
 
 loaded_profiles_data = {}
@@ -154,6 +162,8 @@ def generate_pipename(process_name) -> str:
         pipename = f"ShellEx_{fifth_part}"
     elif process_name == "tcppipe":
         pipename = f"{process_name}{sixth_part}"
+    elif process_name == "ntsvcs" or process_name == "ntsvcs_":
+        pipename = f"{process_name}{sixth_part}"
     else:
         return None
     return pipename
@@ -179,6 +189,163 @@ def load_profiles() -> list:
             temp.append(name)
             loaded_profiles_data[name] = profile_data
     return temp
+
+def get_cs_profiles(path) -> dict:
+    temp = []
+    cs_profiles = {}
+    if os.path.isdir(path):
+        for file in os.listdir(path):
+            if file.endswith(".profile"):
+                temp.append(os.path.join(path, file))
+    for file in temp:
+        cs_profile = mpp.MalleableProfile(profile=file)
+        cs_profiles[file] = cs_profile.profile
+    return cs_profiles
+
+def parse_cs_profile(profile, verb, quiet):
+    sleep = None
+    jitter = None
+    user_agent = None
+    pipename = None
+    spawnx86 = None
+    spawnx64 = None
+
+    config_uris = []
+    config_headers = []
+    server_uris = []
+    client_headers = []
+    server_headers = []
+
+    for kv in profile.keys():
+        obj = profile[kv]
+
+        if type(obj) is Option:
+            if obj.option == "sleeptime":
+                sleep = math.floor(int(obj.value) / 1000)
+            elif obj.option == "jitter":
+                jitter = int(obj.value)
+            elif obj.option == "useragent":
+                user_agent = obj.value
+            elif obj.option == "spawnto_x86":
+                spawnx86 = obj.option
+            elif obj.option == "spawnto_x64":
+                spawnx64 = obj.option
+            elif obj.option == "pipename":
+                pipename = obj.value
+
+        elif type(obj) is Block:
+            name = profile[kv].name
+            data = profile[kv].data
+
+            for d in data:
+                if name == "dns-beacon":
+                    continue
+                elif name == "http-config":
+                    if type(data) is Option:
+                        if data.option == "headers":
+                            vals = data.value.split(",")
+                            config_headers = vals
+                        elif data.option == "uri":
+                            vals = data.value.split(" ")
+                            for val in vals:
+                                config_uris.append(val)
+                elif name == "http-get" and (verb == "any" or verb == "get"):
+                    if type(data) is list:
+                        for d in data:
+                            if type(d) is Option:
+                                if d.option == "uri":
+                                    vals = d.value.split(" ")
+                                    for val in vals:
+                                        server_uris.append(val)
+                            elif type(d) is Block:
+                                if d.name == "client":
+                                    for c in d.data:
+                                        c_type = c.statement
+                                        c_key  = c.key
+                                        c_val  = c.value
+                                        if c_type == "header":
+                                            client_headers.append(f"{c_key}: {c_val}")
+                                elif d.name == "server":
+                                    for c in d.data:
+                                        c_type = c.statement
+                                        c_key  = c.key
+                                        c_val  = c.value
+                                        if c_type == "header":
+                                            server_headers.append(f"{c_key}: {c_val}")
+                elif name == "http-post" and (verb == "any" or "post"):
+                    if type(data) is list:
+                        for d in data:
+                            if type(d) is Option:
+                                if d.option == "uri":
+                                    server_uris.append(d.value)
+                            elif type(d) is Block:
+                                if d.name == "client":
+                                    for c in d.data:
+                                        c_type = c.statement
+                                        c_key  = c.key
+                                        c_val  = c.value
+                                        if c_type == "header":
+                                            client_headers.append(f"{c_key}: {c_val}")
+                                elif d.name == "server":
+                                    for c in d.data:
+                                        c_type = c.statement
+                                        c_key  = c.key
+                                        c_val  = c.value
+                                        if c_type == "header":
+                                            server_headers.append(f"{c_key}: {c_val}")
+                elif name == "process-inject":
+                    if type(data) is list:
+                        for d in data:
+                            if type(d) is Option:
+                                pass
+                            elif type(d) is Statement:
+                                pass
+                elif name == "post-ex":
+                    if type(data) is list and (not spawnx64 and not spawnx86):
+                        for d in data:
+                            if d.option == "spawnto_x86":
+                                if d.value:
+                                    spawnx86 = d.value
+                            elif d.option == "spawnto_x64":
+                                if d.value:
+                                    spawnx64 = d.value
+                            elif d.option == "pipename":
+                                if not pipename:
+                                    pipename = d.value
+        else:
+            continue
+
+    config_headers = list(dict.fromkeys(config_headers))
+    client_headers = list(dict.fromkeys(client_headers))
+    server_headers = list(dict.fromkeys(server_headers))
+
+    config_uris = list(dict.fromkeys(config_uris))
+    server_uris = list(dict.fromkeys(server_uris))
+
+    server_uris = config_uris + server_uris
+    client_headers = config_headers + client_headers
+    server_headers = config_headers + server_headers
+
+    spawnx86 = spawnx86.split("##")[0]
+    spawnx64 = spawnx64.split("##")[0]
+
+    parsed_profile = f"""{{
+    "Request": {server_uris},
+    "Response": {server_headers},
+    "Headers": {client_headers},
+    "User Agent": {user_agent},
+    "Pipename": {pipename},
+    "Sleep": {sleep},
+    "Jitter": {jitter},
+    "Spawnx86": {spawnx86},
+    "Spawnx64": {spawnx64}
+}}"""
+
+    if not quiet:
+        print(f"{parsed_profile}")
+
+    return parsed_profile
+
 
 def Find(name, _search_path = None):
     if _search_path:
@@ -1021,12 +1188,17 @@ Build options:
             demon_jitter = dict(demon_block).get("jitter")
             if not demon_jitter:
                 demon_jitter = random.choice(range(5, 70))
-            demon_spawn32 = dict(demon_block).get("injection")["spawn32"]
-            if not demon_spawn32:
+            injection = dict(demon_block).get("injection")
+            if not injection:
                 demon_spawn32 = None
-            demon_spawn64 = dict(demon_block).get("injection")["spawn64"]
-            if not demon_spawn64:
                 demon_spawn64 = None
+            else:
+                demon_spawn32 = injection.get("spawn32")
+                if not demon_spawn32:
+                    demon_spawn32 = None
+                demon_spawn64 = injection.get("spawn64")
+                if not demon_spawn64:
+                    demon_spawn64 = None
             demon_injection = Injection(spawn_x64=demon_spawn64,
                                         spawn_x86=demon_spawn32,
                                         arch=arch)
@@ -1210,12 +1382,11 @@ class Writer(Base):
             print(profile_block)
 
 if __name__ == "__main__":
-    loaded_profiles = load_profiles()
-
     parser = argparse.ArgumentParser(
             prog='Havoc profile generator',
             description='Generate havoc c2 profiles with ease and randomness')
     parser.add_argument('-c', '--config', type=argparse.FileType('r'), required=False, help='Config file to use, don\' use a conifg file for a completely random profile')
+    parser.add_argument('-r', '--read', type=str, action='store', default="Nothing", help='Directory to read CS profiles from')
     parser.add_argument('-l', '--list', type=str_to_bool, nargs='?', const=True, default=False, help='List supported profiles')
     parser.add_argument('-s', '--sysnative', type=str_to_bool, nargs='?', const=True, default=False, help='Only support sysnative for spawn to')
     parser.add_argument('-a', '--arch', type=str, action='store', default="Nothing", help='Selected architecture between x86, x64 & x86_64')
@@ -1227,13 +1398,8 @@ if __name__ == "__main__":
     parser.add_argument('-q', '--quiet', type=str_to_bool, nargs='?', const=True, default=False, help='Do not show banner')
     args = parser.parse_args()
 
-    def list_profiles() -> None:
-        for profile in loaded_profiles:
-            print_good(f"Profile: {profile}")
-
-    if args.list:
-        list_profiles()
-        sys.exit(0)
+    if not args.quiet:
+        print(f"{BANNER}")
 
     template = None
     outfile = None
@@ -1244,8 +1410,28 @@ if __name__ == "__main__":
     port = None
     arch = None
 
-    if not args.quiet:
-        print(f"{BANNER}")
+    cs_profiles = None
+
+    if args.read != "Nothing":
+        loaded_profiles = get_cs_profiles(args.read)
+        loaded_profile_names = [ x.split("/")[-1] for x in list(loaded_profiles.keys())]
+        temp = {}
+        for i, cs_profile in enumerate(loaded_profiles.keys()):
+            parsed_profile = parse_cs_profile(profile=loaded_profiles[cs_profile], 
+                                              verb="any", 
+                                              quiet=args.quiet)
+            temp[loaded_profile_names[i]] = parsed_profile
+        loaded_profiles = temp
+    else:
+        loaded_profiles = load_profiles()
+
+    def list_profiles() -> None:
+            for profile in loaded_profiles:
+                print_good(f"Profile: {profile}")
+
+    if args.list:
+        list_profiles()
+        sys.exit(0)
 
     if args.profile != "Nothing":
         profile = args.profile
