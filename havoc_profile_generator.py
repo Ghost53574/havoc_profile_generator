@@ -2,6 +2,7 @@
 import ipaddress
 import argparse
 import random
+import datetime
 import uuid
 import json
 import os
@@ -116,7 +117,8 @@ default_pipenames = [
     "shellex",
     "pshost",
     "tcppipe",
-    "ntsvcs"
+    "ntsvcs",
+    "trkwks"
 ]
 
 loaded_profiles_data = {}
@@ -164,9 +166,24 @@ def generate_pipename(process_name) -> str:
         pipename = f"{process_name}{sixth_part}"
     elif process_name == "ntsvcs" or process_name == "ntsvcs_":
         pipename = f"{process_name}{sixth_part}"
+    elif process_name == "trkwks":
+        pipename = f"{process_name}{sixth_part}"
     else:
         return None
     return pipename
+
+def generate_killdate() -> str:
+    return fake.date_time_between_dates(
+        datetime_start=datetime.datetime.now(),
+        datetime_end=datetime.datetime.now() + datetime.timedelta(weeks=52))
+
+def generate_workinghours(start= None,
+                          end = None) -> str:
+    if not start:
+        start = "0:00"
+    if not end:
+        end = "23:59"
+    return f"{start}-{end}"
 
 def get_random_port(port = None) -> int:
     if not port:
@@ -214,7 +231,8 @@ def structure_list(entries):
     temp += " ]"
     return temp
 
-def parse_cs_profile(profile, verb, quiet):
+def parse_cs_profile(profile, 
+                     verb):
     sleep = None
     jitter = None
     user_agent = None
@@ -338,8 +356,20 @@ def parse_cs_profile(profile, verb, quiet):
     client_headers = structure_list(config_headers + client_headers)
     server_headers = structure_list(config_headers + server_headers)
 
-    spawnx86 = spawnx86.split("##")[0]
-    spawnx64 = spawnx64.split("##")[0]
+    pipename = pipename[:-2]
+
+    spawnx86_split = spawnx86.split("\\")
+    spawnx64_split = spawnx64.split("\\")
+
+    if spawnx86_split[0] == "%windir%" and spawnx86_split[2] == "sysnative":
+        spawnx86 = f"{windows_dir_root}\\{windows_dir_sysnative}\\\\{spawnx86_split[4]}"
+    elif spawnx86_split[0] == "%windir%" and spawnx86_split[2] == "syswow64":
+        spawnx86 = f"{windows_dir_root}\\{windows_dir_syswow64}\\\\{spawnx86_split[4]}"
+
+    if spawnx64_split[0] == "%windir%" and spawnx64_split[2] == "sysnative":
+        spawnx64 = f"{windows_dir_root}\\{windows_dir_sysnative}\\\\{spawnx64_split[4]}"
+    elif spawnx64_split[0] == "%windir%" and spawnx64_split[2] == "syswow64":
+        spawnx64 = f"{windows_dir_root}\\{windows_dir_syswow64}\\\\{spawnx64_split[4]}"
 
     parsed_profile = f"""{{
     "Request": {server_uris},
@@ -353,13 +383,10 @@ def parse_cs_profile(profile, verb, quiet):
     "Spawnx64": "{spawnx64}"
 }}"""
 
-    if not quiet:
-        print(f"{parsed_profile}")
-
     return json.loads(parsed_profile)
 
-
-def Find(name, _search_path = None):
+def Find(name, 
+         _search_path = None):
     if _search_path:
         paths = _search_path
     else:
@@ -393,7 +420,10 @@ class Base:
         return self
     
 class Build(Base):
-    def __init__(self, compiler_64=None, compiler_86=None, compiler_nasm=None) -> None:
+    def __init__(self, 
+                 compiler_64=None, 
+                 compiler_86=None, 
+                 compiler_nasm=None) -> None:
         self.compiler_64 = None
         self.compiler_86 = None
         self.compiler_nasm = None
@@ -434,7 +464,10 @@ class Build(Base):
         return template
 
 class Teamserver(Base):
-    def __init__(self, host, port, build: Build = None) -> None:
+    def __init__(self, 
+                 host, 
+                 port, 
+                 build: Build = None) -> None:
         self.host = host
         self.port = port
         self.build = None
@@ -465,12 +498,6 @@ class Operators(Base):
             self.users[username] = password
         if username and password and hashed:
             self.users[username] = {password, hashed}
-
-    def Delete_User(self, Username) -> None:
-        if Username:
-            for k in self.users.keys:
-                if k == Username:
-                    del self.users[k]
     
     def Print(self) -> dict:
         template = {}
@@ -486,7 +513,9 @@ class Operators(Base):
         return template
     
 class Cert(Base):
-    def __init__(self, cert_path, key_path) -> None:
+    def __init__(self, 
+                 cert_path, 
+                 key_path) -> None:
         if os.path.isfile(cert_path):
             self.cert_path = cert_path
         else:
@@ -504,7 +533,11 @@ class Cert(Base):
         return template
     
 class Proxy(Base):
-    def __init__(self, host, port, username = None, password = None) -> None:
+    def __init__(self, 
+                 host, 
+                 port, 
+                 username = None, 
+                 password = None) -> None:
         self.host = host
         self.port = port
         self.username = None
@@ -537,18 +570,32 @@ class Response(Base):
     
 class Http_Listener(Cert, Base):
     host_rotation_types = [ "random", "round-robin" ]
-    def __init__(self, name, hosts, port, host_bind, 
-                 host_rotation = None, user_agent = None, headers = None, urls = None, secure = None, 
-                 cert: Cert = None, proxy: Proxy = None, response: Response = None) -> None:
+    def __init__(self, 
+                 name, 
+                 hosts, 
+                 port, 
+                 host_bind,
+                 killswitch = None,
+                 workinghours = None,
+                 secure = None,
+                 host_rotation = None, 
+                 user_agent = None, 
+                 headers = None, 
+                 urls = None, 
+                 cert: Cert = None, 
+                 proxy: Proxy = None, 
+                 response: Response = None) -> None:
         self.name = name
         self.hosts = hosts
         self.port = port
         self.host_bind = host_bind
+        self.killswitch = None
+        self.workinghours = None
         self.host_rotation = None
+        self.secure = None
         self.user_agent = None
         self.headers = None
         self.urls = None
-        self.secure = None
         self.cert = None
         self.proxy = None
         self.reponse = None
@@ -573,6 +620,14 @@ class Http_Listener(Cert, Base):
             self.secure = secure
         else:
             self.secure = "false"
+        if not killswitch:
+            self.killswitch = generate_killdate()
+        else:
+            self.killswitch = killswitch
+        if not workinghours:
+            self.workinghours = generate_workinghours()
+        else:
+            self.workinghours = workinghours
         if cert:
             self.cert = cert
         if proxy:
@@ -585,15 +640,17 @@ class Http_Listener(Cert, Base):
     def Print(self) -> dict:
         template = {}
         template["Name"] = self.name
-        template["Port"] = self.port
+        template["PortBind"] = self.port
         template["Hosts"] = self.hosts
         template["HostBind"] = self.host_bind
+        template["KillDate"] = self.killswitch
+        template["WorkingHours"] = self.workinghours
         if self.host_rotation:
             template["HostRotation"] = self.host_rotation
         else:
             template["HostRotation"] = "round-robin"
         if self.secure:
-            template["Secure"] = "true"
+            template["Secure"] = self.secure
         else:
             template["Secure"] = "false"
         template["UserAgent"] = self.user_agent
@@ -609,9 +666,15 @@ class Http_Listener(Cert, Base):
 
 class Smb_Listener(Cert, Base):
     host_rotation_types = [ "random", "round-robin" ]
-    def __init__(self, name = None, pipename = None) -> None:
+    def __init__(self, 
+                 name = None, 
+                 pipename = None,
+                 killdate = None,
+                 workinghours = None) -> None:
         self.name = None
         self.pipename = None
+        self.killdate = None
+        self.workinghours = None
 
         if name:
             self.name = name
@@ -628,11 +691,21 @@ class Smb_Listener(Cert, Base):
                 self.pipename = temp
             else:
                 print_fail("Failed to generate pipename")
+        
+        if killdate:
+            self.killdate = killdate
+
+        if workinghours:
+            self.workinghours = workinghours
 
     def Print(self) -> dict:
         template = {}
         template["Name"] = self.name
         template["Pipename"] = self.pipename
+        if self.killdate:
+            template["KillDate"] = self.killdate
+        if self.workinghours:
+            template["WorkingHours"] = self.workinghours
         return template
 
 class External_Listener(Cert, Base):
@@ -652,13 +725,16 @@ class Listeners(Http_Listener, Smb_Listener):
         self.smb_listeners = []
         self.ext_listeners = []
     
-    def Add_Http_Listener(self, listener: Http_Listener) -> None:
+    def Add_Http_Listener(self, 
+                          listener: Http_Listener) -> None:
         self.http_listeners.append(listener.Print())
 
-    def Add_Smb_Listener(self, listener: Smb_Listener) -> None:
+    def Add_Smb_Listener(self, 
+                         listener: Smb_Listener) -> None:
         self.smb_listeners.append(listener.Print())
 
-    def Add_External_Listener(self, listener: External_Listener) -> None:
+    def Add_External_Listener(self, 
+                             listener: External_Listener) -> None:
         self.ext_listeners.append(listener.Print())
 
     def Print(self):
@@ -679,13 +755,19 @@ class Listeners(Http_Listener, Smb_Listener):
 
     def Get(self) -> object:
         return self
+    
+class Binary(Base):
+    pass
 
 class Injection(Base):
     ARCH_X86 = "x86"
     ARCH_X64 = "x64"
     ARCH_SYSWOW = "x86_64"
 
-    def __init__(self, spawn_x64 = None, spawn_x86 = None, arch = None) -> None:
+    def __init__(self, 
+                 spawn_x64 = None, 
+                 spawn_x86 = None, 
+                 arch = None) -> None:
         self.sysnative_binary = None
         self.syswow_binary = None
 
@@ -719,7 +801,8 @@ class Injection(Base):
             else:
                 self.spawn_x86 = self.sysnative_binary
 
-    def Random(self, arch) -> str:
+    def Random(self, 
+               arch) -> str:
         if arch == self.ARCH_X64:
             windows_dir = f"{windows_dir_root}\\{windows_dir_sysnative}\\"
         elif arch == self.ARCH_X86:
@@ -757,7 +840,10 @@ class Binary(Base):
         pass
 
 class Demon(Base):
-    def __init__(self, sleep, jitter, injection: Injection = None) -> None:
+    def __init__(self, 
+                 sleep, 
+                 jitter, 
+                 injection: Injection = None) -> None:
         self.sleep = None
         self.injection = None
 
@@ -783,7 +869,9 @@ class Demon(Base):
         return template
 
 class Service(Base):
-    def __init__(self, endpoint, password) -> None:
+    def __init__(self, 
+                 endpoint, 
+                 password) -> None:
         if endpoint and password:
             self.endpoint = endpoint
             self.password = password
@@ -797,7 +885,12 @@ class Service(Base):
 # Will define Webhook when more webhooks come out
 
 class Generator(Teamserver, Operators, Listeners, Demon, Service):
-    def __init__(self, teamserver: Teamserver, operators: Operators, listeners: Listeners, demon: Demon, service: Service = None) -> None:
+    def __init__(self, 
+                 teamserver: Teamserver, 
+                 operators: Operators, 
+                 listeners: Listeners, 
+                 demon: Demon, 
+                 service: Service = None) -> None:
         self.service = None
 
         if teamserver:
@@ -862,7 +955,8 @@ class Profile():
         service_block = None
         demon_block = None
 
-        print_good("Generating profile")
+        if not quiet:
+            print_good("Generating profile")
 
         if profile:
             self.profile = profile
@@ -920,7 +1014,8 @@ Build options:
 
         build = Build(build_compiler_x64, build_compiler_x86, build_assembler)
         teamserver = Teamserver(teamserver_host, teamserver_port, build)
-        print_good("Teamserver built")
+        if not quiet:
+            print_good("Teamserver built")
 
         if not quiet:
             print("")
@@ -948,7 +1043,8 @@ Build options:
     user: {print_user}
     pass: {print_pass}
                 """)
-        print_good("Generated Operators")
+        if not quiet:
+            print_good("Generated Operators")
 
         if not profile or profile == "any":
             selected_profile = random.choice(profiles)
@@ -963,14 +1059,26 @@ Build options:
         else:
             print_warn("No profile selected, using config data")
 
+        profile_user_agent = None
         profile_request = None
         profile_response = None
         profile_headers = None
+        profile_sleep = None
+        profile_jitter = None
+        profile_spawnx64 = None
+        profile_spawnx86 = None
+        profile_pipename = None
 
         if profile_data:
+            profile_user_agent = profile_data.get("User Agent")
             profile_request = profile_data.get("Request")
             profile_response = profile_data.get("Response")
             profile_headers = profile_data.get("Headers")
+            profile_sleep = profile_data.get("Sleep")
+            profile_jitter = profile_data.get("Jitter")
+            profile_spawnx64 = profile_data.get("Spawnx64")
+            profile_spawnx86 = profile_data.get("Spawnx86")
+            profile_pipename = profile_data.get("Pipename")
 
         listeners = Listeners()
 
@@ -1000,53 +1108,98 @@ Build options:
             if not host:
                 host = all_interfaces
             name = "Http"
-            uesr_agent = fake.user_agent()
-            http_listener = Http_Listener(name, hosts, port, host, None, uesr_agent,
-                                          default_headers, default_urls, "false", 
-                                          None, None, None)
+            user_agent = None
+            if profile_user_agent:
+                user_agent = profile_user_agent
+            else:
+                user_agent = fake.user_agent()
+            headers = None
+            if profile_headers:
+                headers = profile_headers
+            else:
+                headers = default_headers
+            urls = None
+            if profile_request:
+                urls = profile_request
+            else:
+                urls = default_urls
+            
+            response = None
+            if profile_response:
+                response = profile_response
+            http_listener = Http_Listener(name=name,
+                                          hosts=hosts,
+                                          port=port,
+                                          host=host,
+                                          killswitch=None,
+                                          workinghours=None,
+                                          secure="false",
+                                          host_rotation=None,
+                                          user_agent=user_agent,
+                                          headers=headers,
+                                          urls=urls,
+                                          cert=None,
+                                          proxy=None,
+                                          response=response)
             listeners.Add_Http_Listener(http_listener)
             if not quiet:
                 print_warn(f"""
-    name:       {http_listener.name}
-    port:       {http_listener.port}
-    hosts:      {http_listener.hosts}
-    bind:       {http_listener.host_bind}
-    rotation:   {http_listener.host_rotation}
-    user agent: {http_listener.user_agent}
-    headers:    {http_listener.headers}
-    urls:       {http_listener.urls}
-    secure:     {http_listener.secure}
-    cert:       None
-    proxy:      None
-    response:   {http_listener.reponse}
+    name:        {http_listener.name}
+    port:        {http_listener.port}
+    hosts:       {http_listener.hosts}
+    bind:        {http_listener.host_bind}
+    killswitch:  {http_listener.killswitch}
+    workinghours:{http_listener.workinghours}
+    rotation:    {http_listener.host_rotation}
+    user agent:  {http_listener.user_agent}
+    headers:     {http_listener.headers}
+    urls:        {http_listener.urls}
+    secure:      {http_listener.secure}
+    cert:        None
+    proxy:       None
+    response:    {http_listener.reponse}
 """)
             name = "Agent Listener - HTTP/s"
-            uesr_agent = fake.user_agent()
-            https_listener = Http_Listener(name, hosts, "443", host, None, uesr_agent,
-                                          default_headers, default_urls, "true", 
-                                          None, None, None)
+            https_listener = Http_Listener(name=name,
+                                          hosts=hosts,
+                                          port="443",
+                                          host=host,
+                                          killswitch=None,
+                                          workinghours=None,
+                                          secure="true",
+                                          host_rotation=None,
+                                          user_agent=user_agent,
+                                          headers=headers,
+                                          urls=urls,
+                                          cert=None,
+                                          proxy=None,
+                                          response=response)
             listeners.Add_Http_Listener(https_listener)
             if not quiet:
                 print_warn(f"""
-    name:       {https_listener.name}
-    port:       {https_listener.port}
-    hosts:      {https_listener.hosts}
-    bind:       {https_listener.host_bind}
-    rotation:   {https_listener.host_rotation}
-    user agent: {https_listener.user_agent}
-    headers:    {https_listener.headers}
-    urls:       {https_listener.urls}
-    secure:     {https_listener.secure}
-    cert:       None
-    proxy:      None
-    response:   {https_listener.reponse}
+    name:        {https_listener.name}
+    port:        {https_listener.port}
+    hosts:       {https_listener.hosts}
+    bind:        {https_listener.host_bind}
+    killswitch:  {https_listener.killswitch}
+    workinghours:{https_listener.workinghours}
+    rotation:    {https_listener.host_rotation}
+    user agent:  {https_listener.user_agent}
+    headers:     {https_listener.headers}
+    urls:        {https_listener.urls}
+    secure:      {https_listener.secure}
+    cert:        None
+    proxy:       None
+    response:    {https_listener.reponse}
 """)
             smb_listener = Smb_Listener("Pivot - Smb")
             listeners.Add_Smb_Listener(smb_listener)
             if not quiet:
                 print_warn(f"""
-    name:       {smb_listener.name}
-    namepipe:   {smb_listener.pipename}
+    name:         {smb_listener.name}
+    namepipe:     {smb_listener.pipename}
+    killdate:     {smb_listener.killdate}
+    workinghours: {smb_listener.workinghours}
 """)
         else:
             for listener in listeners_block:
@@ -1060,29 +1213,32 @@ Build options:
                         if not quiet:
                             print_warn(f"Type: {listener_type}")
                         listener_hosts = listener[listener_type].get("hosts")
-                        if not listener_hosts:
-                            if not hosts:
+                        if hosts:
+                            temp = []
+                            try:
+                                number_hosts = len(hosts.split(","))
+                            except:
+                                number_hosts = 1
+                            if number_hosts > 1:
+                                for _host in hosts.split(","):
+                                    temp.append(_host)
+                            else:
+                                temp = [ hosts ]
+                            listener_hosts = temp
+                        elif not listener_hosts and not hosts:
                                 temp = []
                                 number_hosts = random.choice(range(1, 20))
                                 for i in range(number_hosts):
                                     temp.append(fake.ipv4())
                                 listener_hosts = temp
-                            else:
-                                temp = []
-                                try:
-                                    number_hosts = len(hosts.split(","))
-                                except:
-                                    number_hosts = 1
-                                if number_hosts > 1:
-                                    for host in hosts.split(","):
-                                        temp.append(host)
-                                else:
-                                    temp = [ hosts ]
-
-                                listener_hosts = temp
+                        
                         listener_bind = listener[listener_type].get("bind")
-                        if not listener_bind:
+                        if not listener_bind and not host:
                             listener_bind = all_interfaces
+                        elif listener_bind and host:
+                            listener_bind = host
+                        elif not listener_bind and host:
+                            listener_bind = host
                         listener_port = listener[listener_type].get("port")
                         if not listener_port:
                             listener_port = get_random_port()
@@ -1101,6 +1257,12 @@ Build options:
                         listener_secure = listener[listener_type].get("secure")
                         if not listener_secure:
                             listener_secure = random.choice([ "true", "false" ])
+                        listener_killswitch = listener[listener_type].get("killswitch")
+                        if not listener_killswitch:
+                            listener_killswitch = generate_killdate()
+                        listener_workinghours = listener[listener_type].get("workinghours")
+                        if not listener_workinghours:
+                            listener_workinghours = generate_workinghours(None, None)
                         listener_cert = listener[listener_type].get("cert")
                         if not listener_cert:
                             listener_cert = None
@@ -1122,36 +1284,54 @@ Build options:
                         if profile_response and not listener_response:
                             listener_response = profile_response
                         response = Response(listener_response)
-                        listeners.Add_Http_Listener(Http_Listener(listener_name, 
-                                        listener_hosts, listener_port,
-                                        listener_bind, listener_rotation,
-                                        listener_user_agent, listener_headers,
-                                        listener_urls, listener_secure,listener_cert,
-                                        listener_proxy, response))
+                        listeners.Add_Http_Listener(Http_Listener(
+                            name=listener_name, 
+                            hosts=listener_hosts,
+                            port=listener_port,
+                            host_bind=listener_bind, 
+                            host_rotation=listener_rotation,
+                            killswitch=listener_killswitch,
+                            workinghours=listener_workinghours,
+                            user_agent=listener_user_agent, 
+                            headers=listener_headers,
+                            urls=listener_urls, 
+                            secure=listener_secure,
+                            cert=listener_cert,
+                            proxy=listener_proxy,
+                            response=response))
                         if not quiet:
                             print_warn(f"""
-    name:       {listener_name}
-    port:       {listener_port}
-    hosts:      {listener_hosts}
-    bind:       {listener_bind}
-    rotation:   {listener_rotation}
-    user agent: {listener_user_agent}
-    headers:    {listener_headers}
-    urls:       {listener_urls}
-    secure:     {listener_secure}
-    cert:       {listener_cert}
-    proxy:      {listener_proxy}
-    response:   {listener_response}
+    name:        {listener_name}
+    port:        {listener_port}
+    hosts:       {listener_hosts}
+    bind:        {listener_bind}
+    rotation:    {listener_rotation}
+    killdate:    {listener_killswitch}
+    workinghours:{listener_workinghours} 
+    user agent:  {listener_user_agent}
+    headers:     {listener_headers}
+    urls:        {listener_urls}
+    secure:      {listener_secure}
+    cert:        {listener_cert}
+    proxy:       {listener_proxy}
+    response:    {listener_response}
 """)
                     elif listener_type == "smb":
                         if not quiet:
                             print_warn(f"Type: {listener_type}")
                         listener_pipename = listener[listener_type].get("pipename")
-                        if not listener_pipename:
+                        if not listener_pipename and not profile_pipename:
                             listener_pipename = generate_pipename(random.choice(default_pipenames))
+                        elif not listener_pipename and profile_pipename:
+                            listener_pipename = generate_pipename(profile_pipename)
                         if not quiet:
                             print_warn(f"Pipename: {listener_pipename}")
-                        listeners.Add_Smb_Listener(Smb_Listener(listener_name, listener_pipename))
+                        listener_killdate = listener[listener_type].get("killdate")
+                        listener_workinghours = listener[listener_type].get("workinghours")
+                        listeners.Add_Smb_Listener(Smb_Listener(listener_name, 
+                                                                listener_pipename,
+                                                                listener_killdate,
+                                                                listener_workinghours))
                     elif listener_type == "external":
                         if not quiet:
                             print_warn(f"Type: {listener_type}")
@@ -1167,7 +1347,8 @@ Build options:
         if not service_block:
             service = None
         else:
-            print_good("Creating optional service block")
+            if not quiet:
+                print_good("Creating optional service block")
             service_endpoint = dict(service_block).get("endpoint")
             service_password = dict(service_block).get("password")
             if not service_endpoint:
@@ -1186,7 +1367,8 @@ Build options:
                     """)
                 service = Service(endpoint=service_endpoint, password=service_password)
 
-        print_good("Creating a demon :)")
+        if not quiet:
+            print_good("Creating a demon :)")
             
         if not demon_block:
             injection = Injection(None, None, arch)
@@ -1203,22 +1385,38 @@ Build options:
             """)
         else:
             demon_sleep = dict(demon_block).get("sleep")
-            if not demon_sleep:
+            if not demon_sleep and not profile_sleep:
                 demon_sleep = random.choice(range(12, 60))
+            elif not demon_sleep and profile_sleep:
+                demon_sleep = profile_sleep
             demon_jitter = dict(demon_block).get("jitter")
-            if not demon_jitter:
+            if not demon_jitter and not profile_jitter:
                 demon_jitter = random.choice(range(5, 70))
+            elif not demon_jitter and profile_jitter:
+                demon_jitter = profile_jitter
             injection = dict(demon_block).get("injection")
             if not injection:
                 demon_spawn32 = None
                 demon_spawn64 = None
+
+                if profile_spawnx86:
+                    demon_spawn32 = profile_spawnx86
+                if profile_spawnx64:
+                    demon_spawn64 = profile_spawnx64
             else:
                 demon_spawn32 = injection.get("spawn32")
-                if not demon_spawn32:
+                if not demon_spawn32 and not profile_spawnx86:
                     demon_spawn32 = None
+                elif not demon_spawn32 and profile_spawnx86:
+                    demon_spawn32_split = profile_spawnx86.split("\\")
+                    demon_spawn32 = f"{demon_spawn32_split[0]}\\\\{demon_spawn32_split[1]}\\\\{demon_spawn32_split[2]}\\\\{demon_spawn32_split[3]}"
                 demon_spawn64 = injection.get("spawn64")
-                if not demon_spawn64:
+                if not demon_spawn64 and not profile_spawnx64:
                     demon_spawn64 = None
+                elif not demon_spawn64 and profile_spawnx64:
+                    demon_spawn64_split = profile_spawnx64.split("\\")
+                    demon_spawn64 = f"{demon_spawn64_split[0]}\\\\{demon_spawn64_split[1]}\\\\{demon_spawn64_split[2]}\\\\{demon_spawn64_split[3]}"
+
             demon_injection = Injection(spawn_x64=demon_spawn64,
                                         spawn_x86=demon_spawn32,
                                         arch=arch)
@@ -1237,7 +1435,8 @@ Build options:
                                    demon=demon,
                                    service=service)
         if self.generator:
-            print_good("Generator complete")
+            if not quiet:
+                print_good("Generator complete")
         else:
             print_fail("Generator failed to compile :(")
 
@@ -1248,10 +1447,12 @@ Build options:
         return self.generator
     
 class Writer(Base):
-    def __init__(self, filename = None) -> None:
+    def __init__(self, 
+                 filename = None) -> None:
         self.filename = filename
 
-    def Write(self, profile) -> None:
+    def Write(self, 
+              profile) -> None:
 
         teamserver = profile["Teamserver"]
         operators  = profile["Operators"]
@@ -1295,9 +1496,11 @@ class Writer(Base):
                 listener_name = listener[listener_type].get("Name")
 
                 if listener_type == "Http":
-                    listener_port = listener[listener_type].get("Port")
+                    listener_port = listener[listener_type].get("PortBind")
                     listener_hosts = listener[listener_type].get("Hosts")
                     listener_bind  = listener[listener_type].get("HostBind")
+                    listener_killdate = listener[listener_type].get("KillDate")
+                    listener_workinghours = listener[listener_type].get("WorkingHours")
                     listener_rotation = listener[listener_type].get("HostRotation")
                     listener_user_agent = listener[listener_type].get("UserAgent")
                     listener_secure = listener[listener_type].get("Secure")
@@ -1310,27 +1513,30 @@ class Writer(Base):
                     listener_block += f'''
     {listener_type} {{
         Name         = "{listener_name}"
-        Port         = {listener_port}
-        Hosts        = {listener_hosts}
+        KillDate     = "{listener_killdate}"
+        WorkingHours = "{listener_workinghours}"
+        Hosts        =  {listener_hosts}
         HostBind     = "{listener_bind}"
         HostRotation = "{listener_rotation}"
-        Secure       = {listener_secure}
+        PortBind     =  {listener_port}
+        PortConn     =  {listener_port}
+        Secure       =  {listener_secure}
         UserAgent    = "{listener_user_agent}"
-        Uris         = {listener_urls}
-        Headers      = {listener_headers}
+        Uris         =  {listener_urls}
+        Headers      =  {listener_headers}
 '''
                     if listener_cert:
                         listener_block += f'''
         Cert {{
             Cert = "{listener_cert["Cert"]}"
-            Key = "{listener_cert["Key"]}"
+            Key  = "{listener_cert["Key"]}"
         }}
 '''
                     if listener_proxy:
                         listener_block += f'''
         Proxy {{
-            Host = "{listener_proxy["Host"]}"
-            Port = {listener_proxy["Port"]}
+            Host     = "{listener_proxy["Host"]}"
+            Port     = {listener_proxy["Port"]}
             Username = "{listener_proxy["Username"]}"
             Password = "{listener_proxy["Password"]}"
         }}
@@ -1343,12 +1549,18 @@ class Writer(Base):
 '''
                 elif listener_type == "Smb":
                     listener_smb_pipename = listener[listener_type].get("Pipename")
+                    listener_smb_killdate = listener[listener_type].get("KillDate")
+                    listener_smb_workinghours = listener[listener_type].get("WorkingHours")
                     listener_block += f'''
     Smb {{
-        Name     = "{listener_name}"
-        PipeName = "{listener_smb_pipename}"
-    }}
+        Name         = "{listener_name}"
+        PipeName     = "{listener_smb_pipename}"
 '''
+                    if listener_smb_killdate:
+                        listener_block =+ f'KillDate     = "{listener_smb_killdate}"'
+                    if listener_smb_workinghours:
+                        listener_block += f'WorkingHours = "{listener_smb_workinghours}"'
+                    listener_block += "    }"
                 elif listener_type == "External":
                     listener_ext_endpoint = listener[listener_type].get("Endpoint")
                     listener_block += f'''
@@ -1381,7 +1593,7 @@ class Writer(Base):
         injection_spawn32 = demon_injection["Spawn86"]
 
         demon_block = f"""Demon {{
-    Sleep = {demon_sleep}
+    Sleep  = {demon_sleep}
     Jitter = {demon_jitter}
 
     Injection {{
@@ -1405,17 +1617,63 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
             prog='Havoc profile generator',
             description='Generate havoc c2 profiles with ease and randomness')
-    parser.add_argument('-c', '--config', type=argparse.FileType('r'), required=False, help='Config file to use, don\' use a conifg file for a completely random profile')
-    parser.add_argument('-r', '--read', type=str, action='store', default="Nothing", help='Directory to read CS profiles from')
-    parser.add_argument('-l', '--list', type=str_to_bool, nargs='?', const=True, default=False, help='List supported profiles')
-    parser.add_argument('-s', '--sysnative', type=str_to_bool, nargs='?', const=True, default=False, help='Only support sysnative for spawn to')
-    parser.add_argument('-a', '--arch', type=str, action='store', default="Nothing", help='Selected architecture between x86, x64 & x86_64')
-    parser.add_argument('-p', '--profile', type=str, action='store', default="Nothing", help='Select a traffic profile')
-    parser.add_argument('-H', '--host', type=str, action='store', default="Nothing", help='The listeners ip')
-    parser.add_argument('-L', '--hosts', type=str, action='store', default="Nothing", help='The hosts array in the form of 10.0.0.1,10.0.0.2')
-    parser.add_argument('-P', '--port', type=str, action='store', default="Nothing", help='Set the port for listeners to listen on')
-    parser.add_argument('-o', '--outfile', type=str, action='store', default="Nothing", help='Output file of the final Havoc C2 pofile')
-    parser.add_argument('-q', '--quiet', type=str_to_bool, nargs='?', const=True, default=False, help='Do not show banner')
+    parser.add_argument('-c', '--config', 
+                        type=argparse.FileType('r'), 
+                        required=False, 
+                        help='Config file to use, don\' use a conifg file for a completely random profile')
+    parser.add_argument('-r', '--read', 
+                        type=str, 
+                        action='store', 
+                        default="Nothing", 
+                        help='Directory to read CS profiles from')
+    parser.add_argument('-l', '--list', 
+                        type=str_to_bool, 
+                        nargs='?', 
+                        const=True, 
+                        default=False, 
+                        help='List supported profiles')
+    parser.add_argument('-s', '--sysnative', 
+                        type=str_to_bool, 
+                        nargs='?', 
+                        const=True, 
+                        default=False, 
+                        help='Only support sysnative for spawn to')
+    parser.add_argument('-a', '--arch', 
+                        type=str, 
+                        action='store', 
+                        default="Nothing", 
+                        help='Selected architecture between x86, x64 & x86_64')
+    parser.add_argument('-p', '--profile', 
+                        type=str, 
+                        action='store',
+                        default="Nothing", 
+                        help='Select a traffic profile')
+    parser.add_argument('-H', '--host', 
+                        type=str, 
+                        action='store', 
+                        default="Nothing", 
+                        help='The listeners ip')
+    parser.add_argument('-L', '--hosts', 
+                        type=str, 
+                        action='store', 
+                        default="Nothing", 
+                        help='The hosts array in the form of 10.0.0.1,10.0.0.2')
+    parser.add_argument('-P', '--port', 
+                        type=str, 
+                        action='store', 
+                        default="Nothing", 
+                        help='Set the port for listeners to listen on')
+    parser.add_argument('-o', '--outfile', 
+                        type=str, 
+                        action='store', 
+                        default="Nothing", 
+                        help='Output file of the final Havoc C2 pofile')
+    parser.add_argument('-q', '--quiet', 
+                        type=str_to_bool, 
+                        nargs='?', 
+                        const=True, 
+                        default=False, 
+                        help='Do not show banner')
     args = parser.parse_args()
 
     if not args.quiet:
@@ -1440,8 +1698,7 @@ if __name__ == "__main__":
         for i, cs_profile in enumerate(loaded_profiles.keys()):
             parsed_profile_name = loaded_profile_names[i]
             parsed_profile_data = parse_cs_profile(profile=loaded_profiles[cs_profile], 
-                                              verb="any", 
-                                              quiet=args.quiet)
+                                                   verb="any")
             parsed_profiles[parsed_profile_name] = parsed_profile_data
         loaded_profiles = loaded_profile_names
         loaded_profiles_data = parsed_profiles
@@ -1485,11 +1742,18 @@ if __name__ == "__main__":
         SYSNATIVE = True
 
     if not args.quiet:
-        print_warn(f"""Selected options were:
-    config:    {config is not None}
-    outfile:   {outfile}
-    profile:   {profile}
+        print_warn(f"""Options were:
+    config:      {config is not None}
+    sysnative:   {SYSNATIVE}
+    profile:     {profile is not None}
+    arch:        {arch is not None}
+    host:        {host is not None}
+    hosts:       {hosts is not None}
+    port:        {port is not None}
+    outfile:     {outfile is not None}
         """)
+
+    print(args)
     
     generated_profile = Profile(quiet=args.quiet,
                                 profiles=loaded_profiles,
@@ -1500,6 +1764,7 @@ if __name__ == "__main__":
                                 hosts=hosts,
                                 arch=arch)
 
-    print_good(f"Saving profile to {outfile}")
+    if not args.quiet and outfile:
+        print_good(f"Saving profile to {outfile}")
     
     Writer(filename=outfile).Write(profile=generated_profile.Print())
