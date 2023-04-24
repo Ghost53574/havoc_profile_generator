@@ -202,6 +202,18 @@ def get_cs_profiles(path) -> dict:
         cs_profiles[file] = cs_profile.profile
     return cs_profiles
 
+def structure_list(entries):
+    temp = "[ "
+    etnries_len = len(entries)
+    for i, entry in enumerate(entries):
+        e = entry.replace("\\","")
+        if not i == etnries_len - 1:
+            temp += f"\"{e}\", "
+        else:
+            temp += f"\"{e}\""
+    temp += " ]"
+    return temp
+
 def parse_cs_profile(profile, verb, quiet):
     sleep = None
     jitter = None
@@ -322,9 +334,9 @@ def parse_cs_profile(profile, verb, quiet):
     config_uris = list(dict.fromkeys(config_uris))
     server_uris = list(dict.fromkeys(server_uris))
 
-    server_uris = config_uris + server_uris
-    client_headers = config_headers + client_headers
-    server_headers = config_headers + server_headers
+    server_uris = structure_list(config_uris + server_uris)
+    client_headers = structure_list(config_headers + client_headers)
+    server_headers = structure_list(config_headers + server_headers)
 
     spawnx86 = spawnx86.split("##")[0]
     spawnx64 = spawnx64.split("##")[0]
@@ -333,18 +345,18 @@ def parse_cs_profile(profile, verb, quiet):
     "Request": {server_uris},
     "Response": {server_headers},
     "Headers": {client_headers},
-    "User Agent": {user_agent},
-    "Pipename": {pipename},
-    "Sleep": {sleep},
-    "Jitter": {jitter},
-    "Spawnx86": {spawnx86},
-    "Spawnx64": {spawnx64}
+    "User Agent": "{user_agent}",
+    "Pipename": "{pipename}",
+    "Sleep": "{sleep}",
+    "Jitter": "{jitter}",
+    "Spawnx86": "{spawnx86}",
+    "Spawnx64": "{spawnx64}"
 }}"""
 
     if not quiet:
         print(f"{parsed_profile}")
 
-    return parsed_profile
+    return json.loads(parsed_profile)
 
 
 def Find(name, _search_path = None):
@@ -833,7 +845,15 @@ class Generator(Teamserver, Operators, Listeners, Demon, Service):
         return self
     
 class Profile():
-    def __init__(self, quiet, profiles, profile = None, config = None, host = None, port = None, hosts = None, arch = None) -> object:
+    def __init__(self, 
+                 quiet, 
+                 profiles, 
+                 profile = None, 
+                 config = None, 
+                 host = None, 
+                 port = None, 
+                 hosts = None, 
+                 arch = None) -> object:
         self.profile = None
         self.config = None
 
@@ -1413,15 +1433,18 @@ if __name__ == "__main__":
     cs_profiles = None
 
     if args.read != "Nothing":
+        
         loaded_profiles = get_cs_profiles(args.read)
         loaded_profile_names = [ x.split("/")[-1] for x in list(loaded_profiles.keys())]
-        temp = {}
+        parsed_profiles = {}
         for i, cs_profile in enumerate(loaded_profiles.keys()):
-            parsed_profile = parse_cs_profile(profile=loaded_profiles[cs_profile], 
+            parsed_profile_name = loaded_profile_names[i]
+            parsed_profile_data = parse_cs_profile(profile=loaded_profiles[cs_profile], 
                                               verb="any", 
                                               quiet=args.quiet)
-            temp[loaded_profile_names[i]] = parsed_profile
-        loaded_profiles = temp
+            parsed_profiles[parsed_profile_name] = parsed_profile_data
+        loaded_profiles = loaded_profile_names
+        loaded_profiles_data = parsed_profiles
     else:
         loaded_profiles = load_profiles()
 
