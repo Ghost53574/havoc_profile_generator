@@ -356,20 +356,21 @@ def parse_cs_profile(profile,
     client_headers = structure_list(config_headers + client_headers)
     server_headers = structure_list(config_headers + server_headers)
 
-    pipename = pipename[:-2]
+    if pipename:
+        pipename = pipename[:-2]
 
-    spawnx86_split = spawnx86.split("\\")
-    spawnx64_split = spawnx64.split("\\")
-
-    if spawnx86_split[0] == "%windir%" and spawnx86_split[2] == "sysnative":
-        spawnx86 = f"{windows_dir_root}\\{windows_dir_sysnative}\\\\{spawnx86_split[4]}"
-    elif spawnx86_split[0] == "%windir%" and spawnx86_split[2] == "syswow64":
-        spawnx86 = f"{windows_dir_root}\\{windows_dir_syswow64}\\\\{spawnx86_split[4]}"
-
-    if spawnx64_split[0] == "%windir%" and spawnx64_split[2] == "sysnative":
-        spawnx64 = f"{windows_dir_root}\\{windows_dir_sysnative}\\\\{spawnx64_split[4]}"
-    elif spawnx64_split[0] == "%windir%" and spawnx64_split[2] == "syswow64":
-        spawnx64 = f"{windows_dir_root}\\{windows_dir_syswow64}\\\\{spawnx64_split[4]}"
+    if spawnx86:
+        spawnx86_split = spawnx86.split("\\")
+        if spawnx86_split[0] == "%windir%" and spawnx86_split[2] == "sysnative":
+            spawnx86 = f"{windows_dir_root}\\{windows_dir_sysnative}\\\\{spawnx86_split[4]}"
+        elif spawnx86_split[0] == "%windir%" and spawnx86_split[2] == "syswow64":
+            spawnx86 = f"{windows_dir_root}\\{windows_dir_syswow64}\\\\{spawnx86_split[4]}"
+    if spawnx64:
+        spawnx64_split = spawnx64.split("\\")
+        if spawnx64_split[0] == "%windir%" and spawnx64_split[2] == "sysnative":
+            spawnx64 = f"{windows_dir_root}\\{windows_dir_sysnative}\\\\{spawnx64_split[4]}"
+        elif spawnx64_split[0] == "%windir%" and spawnx64_split[2] == "syswow64":
+            spawnx64 = f"{windows_dir_root}\\{windows_dir_syswow64}\\\\{spawnx64_split[4]}"
 
     parsed_profile = f"""{{
     "Request": {server_uris},
@@ -1369,7 +1370,6 @@ Build options:
 
         if not quiet:
             print_good("Creating a demon :)")
-            
         if not demon_block:
             injection = Injection(None, None, arch)
             sleep = random.choice(range(12, 60))
@@ -1395,6 +1395,7 @@ Build options:
             elif not demon_jitter and profile_jitter:
                 demon_jitter = profile_jitter
             injection = dict(demon_block).get("injection")
+
             if not injection:
                 demon_spawn32 = None
                 demon_spawn64 = None
@@ -1407,15 +1408,19 @@ Build options:
                 demon_spawn32 = injection.get("spawn32")
                 if not demon_spawn32 and not profile_spawnx86:
                     demon_spawn32 = None
-                elif not demon_spawn32 and profile_spawnx86:
+                elif not demon_spawn32 and profile_spawnx86 != "None":
                     demon_spawn32_split = profile_spawnx86.split("\\")
                     demon_spawn32 = f"{demon_spawn32_split[0]}\\\\{demon_spawn32_split[1]}\\\\{demon_spawn32_split[2]}\\\\{demon_spawn32_split[3]}"
+                else:
+                    demon_spawn32 = None
                 demon_spawn64 = injection.get("spawn64")
                 if not demon_spawn64 and not profile_spawnx64:
                     demon_spawn64 = None
-                elif not demon_spawn64 and profile_spawnx64:
+                elif not demon_spawn64 and profile_spawnx64 != "None":
                     demon_spawn64_split = profile_spawnx64.split("\\")
                     demon_spawn64 = f"{demon_spawn64_split[0]}\\\\{demon_spawn64_split[1]}\\\\{demon_spawn64_split[2]}\\\\{demon_spawn64_split[3]}"
+                else:
+                    demon_spawn64 = None
 
             demon_injection = Injection(spawn_x64=demon_spawn64,
                                         spawn_x86=demon_spawn32,
@@ -1752,8 +1757,6 @@ if __name__ == "__main__":
     port:        {port is not None}
     outfile:     {outfile is not None}
         """)
-
-    print(args)
     
     generated_profile = Profile(quiet=args.quiet,
                                 profiles=loaded_profiles,
