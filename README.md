@@ -98,10 +98,8 @@ Demon {
 As always I am not responsible for anything done by this script or anyone using this script. Ultimately this is just a
 script that generates profiles, which is just text. So don't shoot the messenger.
 
-~~* Coming up next is using https://github.com/brett-fitz/pyMalleableProfileParser to dynamically parse Cobalt Strike profiles directly into usable Havoc prfoiles~~
+- Coming up next is updating this to use the latest push to the Havoc Framework and support versions (later).
 
-* Coming up next is updating this to use the latest push to the Havoc Framework and support versions (later)
+Thank you to C5Spider for the cool logo design that I turned into ICE styled text. 
 
 Have fun!
-
-*Any support is welcome*
