@@ -634,9 +634,9 @@ class Http_Listener(Cert, Base):
         if proxy:
             self.proxy = proxy
         if response:
-            self.reponse = response
+            self.response = response
         else:
-            self.reponse = Response(default_headers)
+            self.response = Response(default_headers)
 
     def Print(self) -> dict:
         template = {}
@@ -661,8 +661,10 @@ class Http_Listener(Cert, Base):
             template["Cert"] = self.cert.Print()
         if self.proxy:
             template["Proxy"] = self.proxy.Print()
-        if self.reponse:
-            template["Response"] = self.reponse.Print()
+        if self.response:
+            if type(self.response) is not Response:
+                self.response = Response(self.response)
+            template["Response"] = self.response.Print()
         return template
 
 class Smb_Listener(Cert, Base):
@@ -757,8 +759,41 @@ class Listeners(Http_Listener, Smb_Listener):
     def Get(self) -> object:
         return self
     
+class Header(Base):
+    def __init__(self, 
+                 MagicMzX64, 
+                 MagicMzX86,
+                ) -> None:
+        self.magicmzx64 = None
+        self.magicmzx86 = None
+
+        if MagicMzX64:
+            self.magicmzx64 = MagicMzX64
+        if MagicMzX86:
+            self.magicmzx86 = MagicMzX86
+
+    def Print(self) -> str:
+        template = {}
+        if self.magicmzx64:
+            template["MagicMzX64"] = self.magicmzx64
+        if self.magicmzx86:
+            template["MagicMzX86"] = self.magicmzx86
+        return template
+    
 class Binary(Base):
-    pass
+    def __init__(self,
+                header: Header
+                ) -> None:
+        self.header = None
+
+        if header:
+            self.header = header
+
+    def Print(self) -> str:
+        template = {}
+        if self.header:
+            template["Header"] = self.header.Print()
+        return template
 
 class Injection(Base):
     ARCH_X86 = "x86"
@@ -833,20 +868,18 @@ class Injection(Base):
         template["Spawn86"] = self.spawn_x86
         return template
 
-class Binary(Base):
-    def __init__(self) -> None:
-        pass
-
-    def Print(self) -> dict:
-        pass
-
 class Demon(Base):
-    def __init__(self, 
-                 sleep, 
-                 jitter, 
+    def __init__(self,
+                 sleep: int,
+                 jitter: int,
+                 xforwardedfor: str = None,
+                 binary: Binary = None,
                  injection: Injection = None) -> None:
         self.sleep = None
         self.injection = None
+        self.jitter = None
+        self.xforwardedfor = None
+        self.binary = None
 
         if sleep:
             self.sleep = sleep
@@ -856,6 +889,10 @@ class Demon(Base):
             self.jitter = jitter
         else:
             self.jitter = 15
+        if xforwardedfor:
+            self.xforwardedfor = xforwardedfor
+        if binary:
+            self.binary = binary
         if injection:
             self.injection = injection
         else:
@@ -865,6 +902,10 @@ class Demon(Base):
         template = {}
         template["Sleep"] = self.sleep
         template["Jitter"] = self.jitter
+        if self.xforwardedfor:
+            template["TrustXForwardedFor"] = self.xforwardedfor
+        if self.binary:
+            template["Binary"] = self.binary.Print()
         if self.injection:
             template["Injection"] = self.injection.Print()
         return template
@@ -1069,6 +1110,7 @@ Build options:
         profile_spawnx64 = None
         profile_spawnx86 = None
         profile_pipename = None
+        profile_xforwardedfor = None
 
         if profile_data:
             profile_user_agent = profile_data.get("User Agent")
@@ -1077,6 +1119,7 @@ Build options:
             profile_headers = profile_data.get("Headers")
             profile_sleep = profile_data.get("Sleep")
             profile_jitter = profile_data.get("Jitter")
+            profile_xforwardedfor = profile_data.get("TrustXForwardedFor")
             profile_spawnx64 = profile_data.get("Spawnx64")
             profile_spawnx86 = profile_data.get("Spawnx86")
             profile_pipename = profile_data.get("Pipename")
@@ -1085,7 +1128,7 @@ Build options:
 
         if not listeners_block:
             if not quiet:
-                print_good("Loading random listeers")
+                print_good("Loading random listeners")
             if not hosts:
                 temp = []
                 number_hosts = random.choice(range(1, 20))
@@ -1131,7 +1174,7 @@ Build options:
             http_listener = Http_Listener(name=name,
                                           hosts=hosts,
                                           port=port,
-                                          host=host,
+                                          host_bind=host,
                                           killswitch=None,
                                           workinghours=None,
                                           secure="false",
@@ -1164,7 +1207,7 @@ Build options:
             https_listener = Http_Listener(name=name,
                                           hosts=hosts,
                                           port="443",
-                                          host=host,
+                                          host_bind=host,
                                           killswitch=None,
                                           workinghours=None,
                                           secure="true",
@@ -1394,6 +1437,27 @@ Build options:
                 demon_jitter = random.choice(range(5, 70))
             elif not demon_jitter and profile_jitter:
                 demon_jitter = profile_jitter
+            demon_xforwardedfor = dict(demon_block).get("trustxforwardedfor")
+            if not demon_xforwardedfor and not profile_xforwardedfor:
+                demon_xforwardedfor = None
+            elif not demon_xforwardedfor and profile_xforwardedfor:
+                demon_xforwardedfor = profile_xforwardedfor
+            demon_binary = dict(demon_block).get("binary")
+            if not demon_binary:
+                demon_binary = None
+            if demon_binary:
+                demon_binary_header = demon_binary.get("header")
+                if demon_binary_header:
+                    demon_binary_magicmzx64 = demon_binary_header.get("magicmzx64")
+                    demon_binary_magicmzx86 = demon_binary_header.get("magicmzx86")
+                    if demon_binary_magicmzx64 or demon_binary_magicmzx86:
+                        demon_binary = Binary(
+                                        Header(
+                                        MagicMzX64=demon_binary_magicmzx64,
+                                        MagicMzX86=demon_binary_magicmzx86
+                                        ))
+                    if type(demon_binary) is not Binary:
+                        demon_binary = None
             injection = dict(demon_block).get("injection")
 
             if not injection:
@@ -1427,12 +1491,19 @@ Build options:
                                         arch=arch)
             if not quiet:
                 print_warn(f"""Demon:
-    sleep:    {demon_sleep}
-    jitter:   {demon_jitter}
-    spawn32:  {demon_injection.spawn_x86}
-    spawn64:  {demon_injection.spawn_x64}
+    sleep:                {demon_sleep}
+    jitter:               {demon_jitter}
+    trustedxforwardedfor: {demon_xforwardedfor}""")
+                if demon_binary:
+                    print_warn(f"        binary:               {demon_binary.Print()}")
+                print_warn(f"""spawn32:              {demon_injection.spawn_x86}
+    spawn64:              {demon_injection.spawn_x64}
             """)
-            demon = Demon(demon_sleep, demon_jitter, demon_injection)
+            demon = Demon(sleep=demon_sleep,
+                          jitter=demon_jitter,
+                          xforwardedfor=demon_xforwardedfor,
+                          binary=demon_binary,
+                          injection=demon_injection)
         
         self.generator = Generator(teamserver=teamserver, 
                                    operators=operators, 
@@ -1565,7 +1636,7 @@ class Writer(Base):
                         listener_block =+ f'KillDate     = "{listener_smb_killdate}"'
                     if listener_smb_workinghours:
                         listener_block += f'WorkingHours = "{listener_smb_workinghours}"'
-                    listener_block += "    }"
+                    listener_block += "    }\n"
                 elif listener_type == "External":
                     listener_ext_endpoint = listener[listener_type].get("Endpoint")
                     listener_block += f'''
@@ -1593,14 +1664,36 @@ class Writer(Base):
 
         demon_sleep = demon["Sleep"]
         demon_jitter = demon["Jitter"]
+        demon_xforwardedfor = demon.get("TrustXForwardedFor")
+        demon_binary = demon.get("Binary")
+        if demon_binary:
+            demon_binary_magicmzx64 = demon_binary["Header"].get("MagicMzX64")
+            demon_binary_magicmzx86 = demon_binary["Header"].get("MagicMzX86")
         demon_injection = demon["Injection"]
         injection_spawn64 = demon_injection["Spawn64"]
         injection_spawn32 = demon_injection["Spawn86"]
 
         demon_block = f"""Demon {{
     Sleep  = {demon_sleep}
-    Jitter = {demon_jitter}
-
+    Jitter = {demon_jitter}"""
+        if demon_xforwardedfor:
+            demon_block += f"""
+    TrustXForwardedFor = "{demon_xforwardedfor}"
+"""
+        if demon_binary and (demon_binary_magicmzx64 or demon_binary_magicmzx86):
+            demon_block += f"""
+    Binary {{
+        Header {{
+"""
+            if demon_binary_magicmzx64:
+                demon_block += f"            MagicMzX64 = \"{demon_binary_magicmzx64}\""
+            if demon_binary_magicmzx86:
+                demon_block += f"            MagicMzX64 = \"{demon_binary_magicmzx86}\""
+            demon_block += f"""
+        }}
+    }}
+"""
+        demon_block += f"""
     Injection {{
         Spawn64 = "{injection_spawn64}"
         Spawn32 = "{injection_spawn32}"
@@ -1769,5 +1862,4 @@ if __name__ == "__main__":
 
     if not args.quiet and outfile:
         print_good(f"Saving profile to {outfile}")
-    
     Writer(filename=outfile).Write(profile=generated_profile.Print())

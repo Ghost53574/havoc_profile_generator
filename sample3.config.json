@@ -1,0 +1,63 @@
+{
+    "ts_host": "127.0.0.1",
+    "ts_port": 8888,
+    "users": [
+        { "Neo": "P@ssw0rd!" },
+        { "c0z": "password" }
+    ],
+    "listeners": [
+        { 
+            "http": {
+                "name": "Http",
+                "hosts": [ "192.168.123.107" ],
+                "bind": "192.168.123.107",
+                "port": 80,
+                "secure": "false",
+                "rotation": "round-robin",
+                "user_agent": "",
+                "headers": [
+                    "Accept-Type: */*, charset: utf-8"
+                ],
+                "urls": [
+                ],
+                "response": {
+                }
+            } 
+        },
+        { 
+            "http": {
+                "name": "Agent Listener - HTTP/s",
+                "hosts": [ "192.168.123.107" ],
+                "bind": "192.168.123.107",
+                "port": 443,
+                "secure": "true"
+            }
+        },
+        { 
+            "smb": {
+                "name": "Pivot - Smb"
+            }
+        },
+        {
+            "external": {
+            }
+        }
+    ],
+    "service": {
+        "endpoint": "service-endpoint",
+        "password": "service-password"
+    },
+    "demon": {
+        "sleep": 20,
+        "trustxforwardedfor": "totallynotmalicoius.c2",
+        "binary": {
+            "header": {
+                "magicmzx64": "\\x00\\x00\\x00\\x00"
+            }
+        },
+        "injection": {
+            "spawn32": "",
+            "spawn64": ""
+        }
+    }
+}
