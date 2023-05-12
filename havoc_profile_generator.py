@@ -795,6 +795,28 @@ class Binary(Base):
             template["Header"] = self.header.Print()
         return template
 
+class Implant(Base):
+    def __init__(self, 
+                 sleep_mask = None, 
+                 sleep_teq = None) -> None:
+        self.sleep_mask = None
+        self.sleep_teq = None
+        if sleep_mask:
+            self.sleep_mask = sleep_mask
+        if sleep_teq:
+            if sleep_teq in [ "WaitForSingleObject", "Foliage", "Ekko"]:
+                self.sleep_teq = sleep_teq
+            else:   
+                self.sleep_teq = "WaitForSingleObject"
+
+    def Print(self) -> str:
+        template = {}
+        if self.sleep_mask:
+            template["SleepMask"] = self.sleep_mask
+        if self.sleep_teq:
+            template["SleepMaskTechnique"] = self.sleep_teq
+        return template
+
 class Injection(Base):
     ARCH_X86 = "x86"
     ARCH_X64 = "x64"
@@ -802,10 +824,14 @@ class Injection(Base):
 
     def __init__(self, 
                  spawn_x64 = None, 
-                 spawn_x86 = None, 
+                 spawn_x86 = None,
+                 alloc = None,
+                 execute = None,
                  arch = None) -> None:
         self.sysnative_binary = None
         self.syswow_binary = None
+        self.alloc = None
+        self.execute = None
 
         if arch == "both":
             self.syswow_binary = self.Random(self.ARCH_SYSWOW)
@@ -837,6 +863,18 @@ class Injection(Base):
             else:
                 self.spawn_x86 = self.sysnative_binary
 
+        if alloc:
+            if alloc in [ "Win32", "Native/Syscall" ]:
+                self.alloc = alloc
+            else:
+                self.alloc = "None"
+        
+        if execute:
+            if execute in [ "Win32", "Native/Syscall" ]:
+                self.execute = execute
+            else:
+                self.execute = "None"
+
     def Random(self, 
                arch) -> str:
         if arch == self.ARCH_X64:
@@ -866,6 +904,10 @@ class Injection(Base):
         template = {}
         template["Spawn64"] = self.spawn_x64
         template["Spawn86"] = self.spawn_x86
+        if self.alloc:
+            template["Alloc"] = self.alloc
+        if self.execute:
+            template["Execute"] = self.execute
         return template
 
 class Demon(Base):
@@ -873,12 +915,14 @@ class Demon(Base):
                  sleep: int,
                  jitter: int,
                  xforwardedfor: str = None,
+                 implant: Implant = None,
                  binary: Binary = None,
                  injection: Injection = None) -> None:
         self.sleep = None
         self.injection = None
         self.jitter = None
         self.xforwardedfor = None
+        self.implant = None
         self.binary = None
 
         if sleep:
@@ -891,6 +935,8 @@ class Demon(Base):
             self.jitter = 15
         if xforwardedfor:
             self.xforwardedfor = xforwardedfor
+        if implant:
+            self.implant = implant
         if binary:
             self.binary = binary
         if injection:
@@ -904,6 +950,8 @@ class Demon(Base):
         template["Jitter"] = self.jitter
         if self.xforwardedfor:
             template["TrustXForwardedFor"] = self.xforwardedfor
+        if self.implant:
+            template["Implant"] = self.implant.Print()
         if self.binary:
             template["Binary"] = self.binary.Print()
         if self.injection:
@@ -1109,6 +1157,9 @@ Build options:
         profile_jitter = None
         profile_spawnx64 = None
         profile_spawnx86 = None
+        profile_alloc = None
+        profile_execute = None
+        profile_sleep_teq = None
         profile_pipename = None
         profile_xforwardedfor = None
 
@@ -1122,6 +1173,9 @@ Build options:
             profile_xforwardedfor = profile_data.get("TrustXForwardedFor")
             profile_spawnx64 = profile_data.get("Spawnx64")
             profile_spawnx86 = profile_data.get("Spawnx86")
+            profile_sleep_teq = profile_data.get("SleepTechnique")
+            profile_alloc = profile_data.get("Alloc")
+            profile_execute = profile_data.get("Execute")
             profile_pipename = profile_data.get("Pipename")
 
         listeners = Listeners()
@@ -1414,7 +1468,7 @@ Build options:
         if not quiet:
             print_good("Creating a demon :)")
         if not demon_block:
-            injection = Injection(None, None, arch)
+            injection = Injection(arch=arch)
             sleep = random.choice(range(12, 60))
             jitter = random.choice(range(5, 70))
             demon = Demon(sleep=sleep, jitter=jitter, injection=injection)
@@ -1442,6 +1496,17 @@ Build options:
                 demon_xforwardedfor = None
             elif not demon_xforwardedfor and profile_xforwardedfor:
                 demon_xforwardedfor = profile_xforwardedfor
+            demon_implant = dict(demon_block).get("implant")
+            if not demon_implant and not profile_sleep_teq:
+                demon_implant = None
+            elif not demon_implant and profile_sleep_teq:
+                demon_implant = Implant("1", profile_sleep_teq)
+            else:
+                demon_implant_sleepmask = dict(demon_implant).get("sleep_mask")
+                demon_implant_sleepteq  = dict(demon_implant).get("sleep_technique")
+                demon_implant = Implant(
+                    sleep_mask=demon_implant_sleepmask,
+                    sleep_teq=demon_implant_sleepteq)
             demon_binary = dict(demon_block).get("binary")
             if not demon_binary:
                 demon_binary = None
@@ -1463,6 +1528,8 @@ Build options:
             if not injection:
                 demon_spawn32 = None
                 demon_spawn64 = None
+                demon_alloc = None
+                demon_execute = None
 
                 if profile_spawnx86:
                     demon_spawn32 = profile_spawnx86
@@ -1485,23 +1552,46 @@ Build options:
                     demon_spawn64 = f"{demon_spawn64_split[0]}\\\\{demon_spawn64_split[1]}\\\\{demon_spawn64_split[2]}\\\\{demon_spawn64_split[3]}"
                 else:
                     demon_spawn64 = None
+                demon_alloc = injection.get("alloc")
+                if not demon_alloc and not profile_alloc:
+                    demon_alloc = None
+                elif not demon_alloc and profile_alloc:
+                    demon_alloc = profile_alloc
+                demon_execute = injection.get("execute")
+                if not demon_execute and not profile_execute:
+                    demon_execute = None
+                elif not demon_execute and profile_execute:
+                    demon_execute = profile_execute
 
             demon_injection = Injection(spawn_x64=demon_spawn64,
                                         spawn_x86=demon_spawn32,
+                                        alloc=demon_alloc,
+                                        execute=demon_execute,
                                         arch=arch)
             if not quiet:
                 print_warn(f"""Demon:
     sleep:                {demon_sleep}
     jitter:               {demon_jitter}
     trustedxforwardedfor: {demon_xforwardedfor}""")
+                if demon_implant:
+                    print_warn(f"""
+    sleep mask:           {demon_implant.sleep_mask}
+    sleep technique:      {demon_implant.sleep_teq}""")
                 if demon_binary:
                     print_warn(f"        binary:               {demon_binary.Print()}")
                 print_warn(f"""spawn32:              {demon_injection.spawn_x86}
     spawn64:              {demon_injection.spawn_x64}
-            """)
+""")
+                print_warn(f"""Injection:
+        spawn_x64:        {demon_injection.spawn_x64}
+        spawn_x86:        {demon_injection.spawn_x86}
+        alloc:            {demon_injection.alloc}
+        execute:          {demon_injection.execute}
+""")
             demon = Demon(sleep=demon_sleep,
                           jitter=demon_jitter,
                           xforwardedfor=demon_xforwardedfor,
+                          implant=demon_implant,
                           binary=demon_binary,
                           injection=demon_injection)
         
@@ -1665,6 +1755,10 @@ class Writer(Base):
         demon_sleep = demon["Sleep"]
         demon_jitter = demon["Jitter"]
         demon_xforwardedfor = demon.get("TrustXForwardedFor")
+        demon_implant = demon.get("Implant")
+        if demon_implant:
+            demon_implant_sleepmask = demon_implant.get("SleepMask")
+            demon_implant_sleepteq  = demon_implant.get("SleepMaskTechnique")
         demon_binary = demon.get("Binary")
         if demon_binary:
             demon_binary_magicmzx64 = demon_binary["Header"].get("MagicMzX64")
@@ -1672,13 +1766,26 @@ class Writer(Base):
         demon_injection = demon["Injection"]
         injection_spawn64 = demon_injection["Spawn64"]
         injection_spawn32 = demon_injection["Spawn86"]
-
+        injection_alloc = demon_injection.get("Alloc")
+        injection_execute = demon_injection.get("Execute")
         demon_block = f"""Demon {{
     Sleep  = {demon_sleep}
     Jitter = {demon_jitter}"""
         if demon_xforwardedfor:
             demon_block += f"""
-    TrustXForwardedFor = "{demon_xforwardedfor}"
+    TrustXForwardedFor = "{demon_xforwardedfor}" 
+"""
+        if demon_implant:
+            demon_block += f"""
+    Implant {{"""
+            if demon_implant_sleepmask:
+                demon_block += f"""
+        SleepMask = {demon_implant_sleepmask}"""
+            if demon_implant_sleepteq:
+                demon_block += f"""
+        SleepMaskTechnique = "{demon_implant_sleepteq}" """
+            demon_block += f"""
+    }}
 """
         if demon_binary and (demon_binary_magicmzx64 or demon_binary_magicmzx86):
             demon_block += f"""
@@ -1696,7 +1803,15 @@ class Writer(Base):
         demon_block += f"""
     Injection {{
         Spawn64 = "{injection_spawn64}"
-        Spawn32 = "{injection_spawn32}"
+        Spawn32 = "{injection_spawn32}" """
+
+        if injection_alloc:
+            demon_block += f"""
+        Alloc = "{injection_alloc}" """
+        if injection_execute:
+            demon_block += f"""
+        Execute = "{injection_execute}" """
+        demon_block += f"""
     }}
 }}"""
         profile_block = teamserver_block + operator_block + listener_block
