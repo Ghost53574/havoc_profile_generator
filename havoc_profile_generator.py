@@ -1744,9 +1744,9 @@ class Writer(Base):
         Header {{
 """
             if demon_binary_magicmzx64:
-                demon_block += f"            MagicMzX64 = \"{demon_binary_magicmzx64}\""
+                demon_block += f"            MagicMz-x64 = \"{demon_binary_magicmzx64}\""
             if demon_binary_magicmzx86:
-                demon_block += f"            MagicMzX64 = \"{demon_binary_magicmzx86}\""
+                demon_block += f"            MagicMz-x86 = \"{demon_binary_magicmzx86}\""
             demon_block += f"""
         }}
     }}
