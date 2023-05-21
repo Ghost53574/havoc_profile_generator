@@ -8,6 +8,8 @@ import json
 import os
 import sys
 import math
+import re
+from enum import Enum
 
 from faker.factory import Factory
 
@@ -89,7 +91,7 @@ default_spawnto_opsec = {
     "dashost": "dasHost.exe ",
     "dllhost": "dllhost.exe /PROCESSID:",
     "conhost": "conhost.exe 0x4",
-    "taskhostw": "taskhostw.exe "
+    "taskhostw": "taskhostw.exe"
 }
 
 default_spawnto_only_sysnative = [
@@ -109,7 +111,10 @@ default_spawnto_all = [
 ]
 
 default_pipenames = [
+    "winsock",
     "mojo",
+    "crashpad",
+    "chromesync",
     "gecko",
     "guid",
     "chrome",
@@ -121,10 +126,31 @@ default_pipenames = [
     "trkwks"
 ]
 
+class Arch(Enum):
+    X86 = 0
+    X64 = 1
+    X86_64 = 3
+
+class AllocEnum(Enum):
+    Win32 = 0
+    Syscall = 1
+    Empty = 2
+
+class ExecuteEnum(Enum):
+    Win32 = 0
+    Syscall = 1
+    Empty = 2
+
 loaded_profiles_data = {}
 
 # Flags
 SYSNATIVE=False
+EVASION=False
+MAX_WEEKS=52
+PID=None
+TID=None
+MIN_PORT=None
+MAX_PORT=None
 
 # Utility functions
 def str_to_bool(value):
@@ -143,58 +169,85 @@ def generate_dllhost_uuid() -> str:
     id = uuid.uuid4().urn[9:]
     return "{" + f"{id}" + "}"
 
-def generate_pipename(process_name) -> str:
-    first_part = random.choice(range(4000,20000))
-    second_part = random.choice(range(4000,20000))
-    third_part = random.choice(range(100000000,9999999999))
-    fourth_part = random.choice(range(100000000,999999999))
-    fifth_part = random.choice(range(2048, 99999))
-    sixth_part = random.choice(range(400, 1024))
-    if not fifth_part or not second_part or not third_part or not fourth_part or not fifth_part or not sixth_part:
-        return None
-    if process_name == "mojo" or process_name == "gecko":
-        pipename = f"{process_name}.{first_part}.{second_part}.{third_part}{fourth_part}"
-    elif process_name == "guid":
-        pipename = f"{generate_dllhost_uuid()}"
-    elif process_name == "chrome":
-        pipename = f"{process_name}.{fifth_part}.{sixth_part}.{fourth_part}"
-    elif process_name == "discord":
-        pipename = f"{process_name}-ipc-{random.choice(range(1,9))}"
-    elif process_name == "shellex":
-        pipename = f"ShellEx_{fifth_part}"
-    elif process_name == "tcppipe":
-        pipename = f"{process_name}{sixth_part}"
-    elif process_name == "ntsvcs" or process_name == "ntsvcs_":
-        pipename = f"{process_name}{sixth_part}"
-    elif process_name == "trkwks":
-        pipename = f"{process_name}{sixth_part}"
+# based on _ilove2pwn's https://gist.github.com/realoriginal/d9178c9b071707fec2d6de89a63e4709
+def generate_pipename(proc) -> str:
+    """
+    Generates a named pipe.
+    """
+    pid = None
+    tid = None
+    if not PID:
+        pid = random.choice(range(2048, 9999))
     else:
-        return None
-    return pipename
+        pid = PID
+    if not TID:
+        tid = random.choice(range(3096, 8192))
+    else:
+        tid = TID
+    PipeName = None
+    PipeList = {
+        'winsock': 'Winsock2\\\\CatalogChangeListener-$#-0',
+        'mojo': f'mojo.{pid}.{tid}.####################',
+        'crashpad': f'crashpad_{pid}_@@@@@@@@@@@@@@@@',
+        'chromesync': f'chrome.sync.{pid}.{tid}.########',
+        'guid': f'{generate_dllhost_uuid()}',
+        'chrome': f'chrome.#####.####.#########',
+        'discord': f'discord-ipc-##',
+        'shellex': f'ShellEx_#####',
+        'tcppipe': f'tcppipe.#####-#####-######',
+        'ntsvcs': f'netsvcs####',
+        'trkwks': f'trkwks####',
+        'pshost': f'PShost.##################.{pid}.DefaultAppDomain.powershell',
+        'gecko': f'gecko.{pid}.{tid}.##################'
+    }
+    if not proc:
+        PipeName = PipeList[ random.randint( 0, len( PipeList ) - 1 ) ]
+    else:
+        PipeName = PipeList.get(proc)
+
+    # Loop through and generate a hex character
+    for Idx in re.findall( r'\$', PipeName ):
+        PipeName = re.sub( r'\$', f'{random.randint( 0, 255 ):x}', PipeName, count = 1 );
+
+    # Loop through and generate a new integer
+    for Idx in re.findall( r'#', PipeName ):
+        PipeName = re.sub( r'#', f'{random.randint( 0, 9 )}', PipeName, count = 1 );
+
+    # Loop through and generate a character( uppercase )
+    for Idx in re.findall( r'@', PipeName ):
+        PipeName = re.sub( r'@', f'{chr(random.randint( 65, 90 ))}', PipeName, count = 1 );
+
+    # Loop through and generate a character( lowercase )
+    for Idx in re.findall( r'!', PipeName ):
+        PipeName = re.sub( r'!', f'{chr(random.randint( 97, 122 ))}', PipeName, count = 1 );
+
+    # return the pipename
+    return PipeName
 
 def generate_killdate() -> str:
     return fake.date_time_between_dates(
         datetime_start=datetime.datetime.now(),
-        datetime_end=datetime.datetime.now() + datetime.timedelta(weeks=52))
+        datetime_end=datetime.datetime.now() + datetime.timedelta(weeks=MAX_WEEKS))
 
-def generate_workinghours(start= None,
-                          end = None) -> str:
+def generate_workinghours(start: str = None,
+                          end: str = None
+                          ) -> str:
     if not start:
         start = "0:00"
     if not end:
         end = "23:59"
     return f"{start}-{end}"
 
-def get_random_port(port = None) -> int:
+def get_random_port(port: int = None) -> int:
     if not port:
-        return random.choice(range(1025, 65534))
+        return random.choice(range(int(MIN_PORT), int(MAX_PORT)))
     else:
         return port
     
 def load_profiles() -> list:
     if not os.path.isdir(profile_dir):
         return None
-    for root, _, files in os.walk(profile_dir):
+    for _, _, files in os.walk(profile_dir):
         loaded_profiles = files
     temp = []
     for f in loaded_profiles:
@@ -219,7 +272,7 @@ def get_cs_profiles(path) -> dict:
         cs_profiles[file] = cs_profile.profile
     return cs_profiles
 
-def structure_list(entries):
+def structure_list(entries: list) -> list:
     temp = "[ "
     etnries_len = len(entries)
     for i, entry in enumerate(entries):
@@ -231,8 +284,9 @@ def structure_list(entries):
     temp += " ]"
     return temp
 
-def parse_cs_profile(profile, 
-                     verb):
+def parse_cs_profile(profile: dict, 
+                     verb: str = "any"
+                     ) -> str:
     sleep = None
     jitter = None
     user_agent = None
@@ -407,7 +461,9 @@ def print_fail(message):
     raise Exception(f"{FAIL}[x] {message}{ENDC}")
 
 class Base:
-    def Find(self, name, _search_path = None):
+    def Find(self, 
+             name: str,
+            _search_path: str = None):
         if _search_path:
             paths = _search_path
         else:
@@ -422,9 +478,9 @@ class Base:
     
 class Build(Base):
     def __init__(self, 
-                 compiler_64=None, 
-                 compiler_86=None, 
-                 compiler_nasm=None) -> None:
+                 compiler_64: str = None, 
+                 compiler_86: str = None, 
+                 compiler_nasm: str = None) -> None:
         self.compiler_64 = None
         self.compiler_86 = None
         self.compiler_nasm = None
@@ -466,8 +522,8 @@ class Build(Base):
 
 class Teamserver(Base):
     def __init__(self, 
-                 host, 
-                 port, 
+                 host: str, 
+                 port: int, 
                  build: Build = None) -> None:
         self.host = host
         self.port = port
@@ -535,8 +591,8 @@ class Cert(Base):
     
 class Proxy(Base):
     def __init__(self, 
-                 host, 
-                 port, 
+                 host: str, 
+                 port: int, 
                  username = None, 
                  password = None) -> None:
         self.host = host
@@ -572,17 +628,17 @@ class Response(Base):
 class Http_Listener(Cert, Base):
     host_rotation_types = [ "random", "round-robin" ]
     def __init__(self, 
-                 name, 
-                 hosts, 
-                 port, 
-                 host_bind,
-                 killswitch = None,
-                 workinghours = None,
-                 secure = None,
-                 host_rotation = None, 
-                 user_agent = None, 
-                 headers = None, 
-                 urls = None, 
+                 name: str, 
+                 hosts: list, 
+                 port: int, 
+                 host_bind: str,
+                 killswitch: str = None,
+                 workinghours: str = None,
+                 secure: str = None,
+                 host_rotation: str = None, 
+                 user_agent: str = None, 
+                 headers: list = None, 
+                 urls: list = None, 
                  cert: Cert = None, 
                  proxy: Proxy = None, 
                  response: Response = None) -> None:
@@ -670,10 +726,10 @@ class Http_Listener(Cert, Base):
 class Smb_Listener(Cert, Base):
     host_rotation_types = [ "random", "round-robin" ]
     def __init__(self, 
-                 name = None, 
-                 pipename = None,
-                 killdate = None,
-                 workinghours = None) -> None:
+                 name: str = None, 
+                 pipename: str = None,
+                 killdate: str = None,
+                 workinghours: str = None) -> None:
         self.name = None
         self.pipename = None
         self.killdate = None
@@ -712,7 +768,9 @@ class Smb_Listener(Cert, Base):
         return template
 
 class External_Listener(Cert, Base):
-    def __init__(self, name, endpoint) -> None:
+    def __init__(self, 
+                 name: str, 
+                 endpoint: str) -> None:
         self.name = name
         self.endpoint = endpoint
 
@@ -729,15 +787,18 @@ class Listeners(Http_Listener, Smb_Listener):
         self.ext_listeners = []
     
     def Add_Http_Listener(self, 
-                          listener: Http_Listener) -> None:
+                          listener: Http_Listener
+                          ) -> None:
         self.http_listeners.append(listener.Print())
 
     def Add_Smb_Listener(self, 
-                         listener: Smb_Listener) -> None:
+                         listener: Smb_Listener
+                         ) -> None:
         self.smb_listeners.append(listener.Print())
 
     def Add_External_Listener(self, 
-                             listener: External_Listener) -> None:
+                             listener: External_Listener
+                             ) -> None:
         self.ext_listeners.append(listener.Print())
 
     def Print(self):
@@ -761,8 +822,8 @@ class Listeners(Http_Listener, Smb_Listener):
     
 class Header(Base):
     def __init__(self, 
-                 MagicMzX64, 
-                 MagicMzX86,
+                 MagicMzX64: str = None, 
+                 MagicMzX86: str = None,
                 ) -> None:
         self.magicmzx64 = None
         self.magicmzx86 = None
@@ -782,8 +843,8 @@ class Header(Base):
     
 class Binary(Base):
     def __init__(self,
-                header: Header
-                ) -> None:
+                 header: Header = None
+                 ) -> None:
         self.header = None
 
         if header:
@@ -797,8 +858,9 @@ class Binary(Base):
 
 class Implant(Base):
     def __init__(self, 
-                 sleep_mask = None, 
-                 sleep_teq = None) -> None:
+                 sleep_mask: str = None, 
+                 sleep_teq: str = None
+                 ) -> None:
         self.sleep_mask = None
         self.sleep_teq = None
         if sleep_mask:
@@ -823,22 +885,23 @@ class Injection(Base):
     ARCH_SYSWOW = "x86_64"
 
     def __init__(self, 
-                 spawn_x64 = None, 
-                 spawn_x86 = None,
-                 alloc = None,
-                 execute = None,
-                 arch = None) -> None:
+                 spawn_x64: str = None, 
+                 spawn_x86: str = None,
+                 alloc: AllocEnum = None,
+                 execute: ExecuteEnum = None,
+                 arch: Arch = None
+                 ) -> None:
         self.sysnative_binary = None
         self.syswow_binary = None
         self.alloc = None
         self.execute = None
 
-        if arch == "both":
+        if arch == Arch.X86_64:
             self.syswow_binary = self.Random(self.ARCH_SYSWOW)
             self.sysnative_binary = self.Random(self.ARCH_X64)
-        elif arch == "x64":
+        elif arch == Arch.X64:
             self.sysnative_binary = self.Random(self.ARCH_X64)
-        elif arch == "x86":
+        elif arch == Arch.X86:
             self.sysnative_binary = self.Random(self.ARCH_X86)
         else:
             self.sysnative_binary = self.Random(self.ARCH_X86)
@@ -846,9 +909,9 @@ class Injection(Base):
         if spawn_x64:
             self.spawn_x64 = spawn_x64
         else:
-            if not SYSNATIVE and arch == "both":
+            if not SYSNATIVE and arch == Arch.X86_64:
                 self.spawn_x64 = self.syswow_binary
-            elif not SYSNATIVE and arch == "x64":
+            elif not SYSNATIVE and arch == Arch.X64:
                 self.spawn_x64 = self.sysnative_binary
             else:
                 self.spawn_x64 = self.sysnative_binary
@@ -856,37 +919,42 @@ class Injection(Base):
         if spawn_x86:
             self.spawn_x86 = spawn_x86
         else:
-            if not SYSNATIVE and arch == "both":
+            if not SYSNATIVE and arch == Arch.X86_64:
                 self.spawn_x86 = self.syswow_binary
-            elif not SYSNATIVE and arch == "x86":
+            elif not SYSNATIVE and arch == Arch.X86:
                 self.spawn_x86 = self.sysnative_binary
             else:
                 self.spawn_x86 = self.sysnative_binary
 
         if alloc:
-            if alloc in [ "Win32", "Native/Syscall" ]:
-                self.alloc = alloc
+            if alloc in AllocEnum:
+                if alloc is AllocEnum.Win32:
+                    alloc = "Win32"
+                elif alloc is AllocEnum.Syscall:
+                    alloc = "Native/Syscall"
             else:
                 self.alloc = "None"
         
         if execute:
-            if execute in [ "Win32", "Native/Syscall" ]:
-                self.execute = execute
+            if execute in ExecuteEnum:
+                if execute is ExecuteEnum.Win32:
+                    execute = "Win32"
+                elif execute is ExecuteEnum.Syscall:
+                    execute = "Native/Syscall"
             else:
                 self.execute = "None"
 
     def Random(self, 
-               arch) -> str:
-        if arch == self.ARCH_X64:
+               arch: Arch
+               ) -> str:
+        if arch == Arch.X64 or arch == Arch.X86:
             windows_dir = f"{windows_dir_root}\\{windows_dir_sysnative}\\"
-        elif arch == self.ARCH_X86:
-            windows_dir = f"{windows_dir_root}\\{windows_dir_sysnative}\\"
-        elif arch == self.ARCH_SYSWOW:
+        elif arch == Arch.X86_64:
             windows_dir = f"{windows_dir_root}\\{windows_dir_syswow64}\\"
         else:
             return None
         
-        if arch == self.ARCH_SYSWOW:
+        if arch == Arch.X86_64:
             prog = random.choice(default_spawnto_all)
         else:
             prog = random.choice(default_spawnto_only_sysnative)
@@ -917,7 +985,8 @@ class Demon(Base):
                  xforwardedfor: str = None,
                  implant: Implant = None,
                  binary: Binary = None,
-                 injection: Injection = None) -> None:
+                 injection: Injection = None
+                 ) -> None:
         self.sleep = None
         self.injection = None
         self.jitter = None
@@ -960,8 +1029,9 @@ class Demon(Base):
 
 class Service(Base):
     def __init__(self, 
-                 endpoint, 
-                 password) -> None:
+                 endpoint: str, 
+                 password: str
+                 ) -> None:
         if endpoint and password:
             self.endpoint = endpoint
             self.password = password
@@ -980,7 +1050,8 @@ class Generator(Teamserver, Operators, Listeners, Demon, Service):
                  operators: Operators, 
                  listeners: Listeners, 
                  demon: Demon, 
-                 service: Service = None) -> None:
+                 service: Service = None
+                 ) -> None:
         self.service = None
 
         if teamserver:
@@ -1029,14 +1100,16 @@ class Generator(Teamserver, Operators, Listeners, Demon, Service):
     
 class Profile():
     def __init__(self, 
-                 quiet, 
-                 profiles, 
-                 profile = None, 
-                 config = None, 
-                 host = None, 
-                 port = None, 
-                 hosts = None, 
-                 arch = None) -> object:
+                 quiet: bool,
+                 profiles: list, 
+                 profile: str = None, 
+                 config: str = None, 
+                 host: str = None, 
+                 port: int = None, 
+                 hosts: list = None, 
+                 arch: Arch = None,
+                 extra_listeners: list = None
+                 ) -> object:
         self.profile = None
         self.config = None
 
@@ -1090,26 +1163,11 @@ class Profile():
         if not build_assembler:
             build_assembler = default_assembler
 
-        if not quiet:
-            print("")
-            print_warn(f"""Teamserver options:
-    Host: {teamserver_host}
-    Port: {teamserver_port}
-
-Build options:
-    Compiler_x64: {build_compiler_x64}
-    Compiler x86: {build_compiler_x86}
-    Nasm:         {build_assembler}
-        """)
-
         build = Build(build_compiler_x64, build_compiler_x86, build_assembler)
         teamserver = Teamserver(teamserver_host, teamserver_port, build)
         if not quiet:
             print_good("Teamserver built")
 
-        if not quiet:
-            print("")
-            print_warn("Getting users")
         if not operator_block:
             operators = Operators()
             random_uesrname = fake.user_name()
@@ -1123,16 +1181,6 @@ Build options:
                     username = key
                     password = dict(op)[key]
                     operators.Add_User(username, password)
-
-        if not quiet:
-            print_operator = dict(operators.Print())
-            for key in print_operator.keys():
-                print_user = key
-                print_pass = print_operator[key]["Password"]
-                print_warn(f"""Operator users:
-    user: {print_user}
-    pass: {print_pass}
-                """)
         if not quiet:
             print_good("Generated Operators")
 
@@ -1240,23 +1288,6 @@ Build options:
                                           proxy=None,
                                           response=response)
             listeners.Add_Http_Listener(http_listener)
-            if not quiet:
-                print_warn(f"""
-    name:        {http_listener.name}
-    port:        {http_listener.port}
-    hosts:       {http_listener.hosts}
-    bind:        {http_listener.host_bind}
-    killswitch:  {http_listener.killswitch}
-    workinghours:{http_listener.workinghours}
-    rotation:    {http_listener.host_rotation}
-    user agent:  {http_listener.user_agent}
-    headers:     {http_listener.headers}
-    urls:        {http_listener.urls}
-    secure:      {http_listener.secure}
-    cert:        None
-    proxy:       None
-    response:    {http_listener.reponse}
-""")
             name = "Agent Listener - HTTP/s"
             https_listener = Http_Listener(name=name,
                                           hosts=hosts,
@@ -1273,32 +1304,8 @@ Build options:
                                           proxy=None,
                                           response=response)
             listeners.Add_Http_Listener(https_listener)
-            if not quiet:
-                print_warn(f"""
-    name:        {https_listener.name}
-    port:        {https_listener.port}
-    hosts:       {https_listener.hosts}
-    bind:        {https_listener.host_bind}
-    killswitch:  {https_listener.killswitch}
-    workinghours:{https_listener.workinghours}
-    rotation:    {https_listener.host_rotation}
-    user agent:  {https_listener.user_agent}
-    headers:     {https_listener.headers}
-    urls:        {https_listener.urls}
-    secure:      {https_listener.secure}
-    cert:        None
-    proxy:       None
-    response:    {https_listener.reponse}
-""")
             smb_listener = Smb_Listener("Pivot - Smb")
             listeners.Add_Smb_Listener(smb_listener)
-            if not quiet:
-                print_warn(f"""
-    name:         {smb_listener.name}
-    namepipe:     {smb_listener.pipename}
-    killdate:     {smb_listener.killdate}
-    workinghours: {smb_listener.workinghours}
-""")
         else:
             for listener in listeners_block:
                 for listener_type in listener.keys():
@@ -1397,23 +1404,6 @@ Build options:
                             cert=listener_cert,
                             proxy=listener_proxy,
                             response=response))
-                        if not quiet:
-                            print_warn(f"""
-    name:        {listener_name}
-    port:        {listener_port}
-    hosts:       {listener_hosts}
-    bind:        {listener_bind}
-    rotation:    {listener_rotation}
-    killdate:    {listener_killswitch}
-    workinghours:{listener_workinghours} 
-    user agent:  {listener_user_agent}
-    headers:     {listener_headers}
-    urls:        {listener_urls}
-    secure:      {listener_secure}
-    cert:        {listener_cert}
-    proxy:       {listener_proxy}
-    response:    {listener_response}
-""")
                     elif listener_type == "smb":
                         if not quiet:
                             print_warn(f"Type: {listener_type}")
@@ -1458,11 +1448,6 @@ Build options:
             if not service_endpoint and not service_password:
                 service = None
             else:
-                if not quiet:
-                    print_warn(f"""Service:
-    endpoint: {service_endpoint}
-    password: {service_password}
-                    """)
                 service = Service(endpoint=service_endpoint, password=service_password)
 
         if not quiet:
@@ -1472,14 +1457,6 @@ Build options:
             sleep = random.choice(range(12, 60))
             jitter = random.choice(range(5, 70))
             demon = Demon(sleep=sleep, jitter=jitter, injection=injection)
-            if not quiet:
-                print("")
-                print_warn(f"""Demon:
-    sleep:    {sleep}
-    jitter:   {jitter}
-    spawn32:  {injection.spawn_x86}
-    spawn64:  {injection.spawn_x64}
-            """)
         else:
             demon_sleep = dict(demon_block).get("sleep")
             if not demon_sleep and not profile_sleep:
@@ -1563,31 +1540,16 @@ Build options:
                 elif not demon_execute and profile_execute:
                     demon_execute = profile_execute
 
+                if demon_alloc:
+                    demon_alloc = AllocEnum(demon_alloc)
+                if demon_execute:
+                    demon_execute = ExecuteEnum(demon_execute)
+
             demon_injection = Injection(spawn_x64=demon_spawn64,
                                         spawn_x86=demon_spawn32,
                                         alloc=demon_alloc,
                                         execute=demon_execute,
                                         arch=arch)
-            if not quiet:
-                print_warn(f"""Demon:
-    sleep:                {demon_sleep}
-    jitter:               {demon_jitter}
-    trustedxforwardedfor: {demon_xforwardedfor}""")
-                if demon_implant:
-                    print_warn(f"""
-    sleep mask:           {demon_implant.sleep_mask}
-    sleep technique:      {demon_implant.sleep_teq}""")
-                if demon_binary:
-                    print_warn(f"        binary:               {demon_binary.Print()}")
-                print_warn(f"""spawn32:              {demon_injection.spawn_x86}
-    spawn64:              {demon_injection.spawn_x64}
-""")
-                print_warn(f"""Injection:
-        spawn_x64:        {demon_injection.spawn_x64}
-        spawn_x86:        {demon_injection.spawn_x86}
-        alloc:            {demon_injection.alloc}
-        execute:          {demon_injection.execute}
-""")
             demon = Demon(sleep=demon_sleep,
                           jitter=demon_jitter,
                           xforwardedfor=demon_xforwardedfor,
@@ -1614,7 +1576,8 @@ Build options:
     
 class Writer(Base):
     def __init__(self, 
-                 filename = None) -> None:
+                 filename: str = None
+                 ) -> None:
         self.filename = filename
 
     def Write(self, 
@@ -1866,7 +1829,7 @@ if __name__ == "__main__":
                         action='store', 
                         default="Nothing", 
                         help='The listeners ip')
-    parser.add_argument('-L', '--hosts', 
+    parser.add_argument('-S', '--hosts', 
                         type=str, 
                         action='store', 
                         default="Nothing", 
@@ -1876,6 +1839,22 @@ if __name__ == "__main__":
                         action='store', 
                         default="Nothing", 
                         help='Set the port for listeners to listen on')
+    parser.add_argument('-L', '--listeners', 
+                        type=str, 
+                        action='store', 
+                        default="Nothing", 
+                        help='Set the port for listeners to listen on')
+    parser.add_argument('-E', '--evasion', 
+                        type=str_to_bool, 
+                        nargs='?', 
+                        const=True, 
+                        default=False, 
+                        help='Set beacon defaults to be more evasive')
+    parser.add_argument('-M', '--mports', 
+                        type=str, 
+                        action='store', 
+                        default="Nothing",
+                        help='Set\'s the min port and max port for randomization')
     parser.add_argument('-o', '--outfile', 
                         type=str, 
                         action='store', 
@@ -1900,11 +1879,11 @@ if __name__ == "__main__":
     hosts = None
     port = None
     arch = None
+    listeners = None
 
     cs_profiles = None
 
     if args.read != "Nothing":
-        
         loaded_profiles = get_cs_profiles(args.read)
         loaded_profile_names = [ x.split("/")[-1] for x in list(loaded_profiles.keys())]
         parsed_profiles = {}
@@ -1917,6 +1896,9 @@ if __name__ == "__main__":
         loaded_profiles_data = parsed_profiles
     else:
         loaded_profiles = load_profiles()
+    
+    if not loaded_profiles or not loaded_profiles_data:
+        print_fail("Loaded profiles failed to load. Make sure there is a config directory with profile templates in it or a directory with CS profiles is specified")
 
     def list_profiles() -> None:
             for profile in loaded_profiles:
@@ -1932,7 +1914,12 @@ if __name__ == "__main__":
         profile = "any"
     
     if args.arch != "Nothing":
-        arch = args.arch
+        if args.arch == "x86_64":
+            arch = Arch("x86_64")
+        elif args.arch == "x64":
+            arch == Arch("x64")
+        elif args.arch == "x86":
+            arch == Arch("x86")
     
     if args.host != "Nothing":
         host = args.host
@@ -1942,6 +1929,24 @@ if __name__ == "__main__":
 
     if args.port != "Nothing":
         port = args.port
+
+    if args.mports != "Nothing":
+        port_min = args.mports.split(',')[0]
+        if port_min:
+            MIN_PORT = port_min
+        else:
+            MIN_PORT = 1024
+        port_max = args.mports.split(',')[1]
+        if port_max:
+            MAX_PORT = port_max
+        else:
+            MAX_PORT = 65534
+    else:
+        MIN_PORT = 1024
+        MAX_PORT = 65534
+
+    if args.listeners != "Nothing":
+        listeners = args.listeners
     
     if args.outfile != "Nothing":
         outfile = args.outfile
@@ -1953,16 +1958,20 @@ if __name__ == "__main__":
 
     if args.sysnative:
         SYSNATIVE = True
+    if args.evasion:
+        EVASION = True
 
     if not args.quiet:
         print_warn(f"""Options were:
     config:      {config is not None}
     sysnative:   {SYSNATIVE}
+    evasion:     {EVASION}
     profile:     {profile is not None}
     arch:        {arch is not None}
     host:        {host is not None}
     hosts:       {hosts is not None}
     port:        {port is not None}
+    listeners:   {listeners is not None}
     outfile:     {outfile is not None}
         """)
     
@@ -1973,6 +1982,7 @@ if __name__ == "__main__":
                                 host=host,
                                 port=port,
                                 hosts=hosts,
+                                extra_listeners=listeners,
                                 arch=arch)
 
     if not args.quiet and outfile:
