@@ -184,7 +184,6 @@ def generate_pipename(proc) -> str:
         tid = random.choice(range(3096, 8192))
     else:
         tid = TID
-    PipeName = None
     PipeList = {
         'winsock': 'Winsock2\\\\CatalogChangeListener-$#-0',
         'mojo': f'mojo.{pid}.{tid}.####################',
@@ -889,7 +888,7 @@ class Injection(Base):
                  spawn_x86: str = None,
                  alloc: AllocEnum = None,
                  execute: ExecuteEnum = None,
-                 arch: Arch = None
+                 arch: Arch = Arch.X64
                  ) -> None:
         self.sysnative_binary = None
         self.syswow_binary = None
@@ -897,14 +896,14 @@ class Injection(Base):
         self.execute = None
 
         if arch == Arch.X86_64:
-            self.syswow_binary = self.Random(self.ARCH_SYSWOW)
-            self.sysnative_binary = self.Random(self.ARCH_X64)
+            self.syswow_binary = self.Random(Arch.X86_64)
+            self.sysnative_binary = self.Random(Arch.X64)
         elif arch == Arch.X64:
-            self.sysnative_binary = self.Random(self.ARCH_X64)
+            self.sysnative_binary = self.Random(Arch.X64)
         elif arch == Arch.X86:
-            self.sysnative_binary = self.Random(self.ARCH_X86)
+            self.sysnative_binary = self.Random(Arch.X86)
         else:
-            self.sysnative_binary = self.Random(self.ARCH_X86)
+            self.sysnative_binary = self.Random(Arch.X86)
 
         if spawn_x64:
             self.spawn_x64 = spawn_x64
@@ -1307,16 +1306,14 @@ class Profile():
             smb_listener = Smb_Listener("Pivot - Smb")
             listeners.Add_Smb_Listener(smb_listener)
         else:
+            if not quiet:
+                print_good("Loading random listeners")
             for listener in listeners_block:
                 for listener_type in listener.keys():
                     listener_name = listener[listener_type].get("name")
                     if not listener_name:
                         listener_name = fake.user_name()
-                    if not quiet:
-                        print_good("Loading listener profile:")
                     if listener_type == "http":
-                        if not quiet:
-                            print_warn(f"Type: {listener_type}")
                         listener_hosts = listener[listener_type].get("hosts")
                         if hosts:
                             temp = []
@@ -1405,15 +1402,11 @@ class Profile():
                             proxy=listener_proxy,
                             response=response))
                     elif listener_type == "smb":
-                        if not quiet:
-                            print_warn(f"Type: {listener_type}")
                         listener_pipename = listener[listener_type].get("pipename")
-                        if not listener_pipename and not profile_pipename:
+                        if not listener_pipename and (not profile_pipename or profile_pipename == "None"):
                             listener_pipename = generate_pipename(random.choice(default_pipenames))
                         elif not listener_pipename and profile_pipename:
                             listener_pipename = generate_pipename(profile_pipename)
-                        if not quiet:
-                            print_warn(f"Pipename: {listener_pipename}")
                         listener_killdate = listener[listener_type].get("killdate")
                         listener_workinghours = listener[listener_type].get("workinghours")
                         listeners.Add_Smb_Listener(Smb_Listener(listener_name, 
@@ -1421,16 +1414,10 @@ class Profile():
                                                                 listener_killdate,
                                                                 listener_workinghours))
                     elif listener_type == "external":
-                        if not quiet:
-                            print_warn(f"Type: {listener_type}")
                         listener_endpoint = listener[listener_type].get("endpoint")
                         if not listener_endpoint:
                             listener_endpoint = None
-                        if not quiet:
-                            print_warn(f"Endpoint: {listener_endpoint}")
                         listeners.Add_External_Listener(External_Listener(listener_name, listener_endpoint))
-                    else:
-                        print_warn(f"Listener {listener_type} is not available")
 
         if not service_block:
             service = None
@@ -1529,6 +1516,7 @@ class Profile():
                     demon_spawn64 = f"{demon_spawn64_split[0]}\\\\{demon_spawn64_split[1]}\\\\{demon_spawn64_split[2]}\\\\{demon_spawn64_split[3]}"
                 else:
                     demon_spawn64 = None
+                
                 demon_alloc = injection.get("alloc")
                 if not demon_alloc and not profile_alloc:
                     demon_alloc = None
