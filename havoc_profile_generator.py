@@ -1490,14 +1490,14 @@ class Profile():
             injection = dict(demon_block).get("injection")
 
             if not injection:
-                demon_spawn32 = None
-                demon_spawn64 = None
                 demon_alloc = None
                 demon_execute = None
+                demon_spawn32 = None
+                demon_spawn64 = None
 
-                if profile_spawnx86:
+                if profile_spawnx86 and not profile_spawnx86 == "None":
                     demon_spawn32 = profile_spawnx86
-                if profile_spawnx64:
+                if profile_spawnx64 and not profile_spawnx64 == "None":
                     demon_spawn64 = profile_spawnx64
             else:
                 demon_spawn32 = injection.get("spawn32")
