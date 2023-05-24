@@ -9,6 +9,8 @@ import os
 import sys
 import math
 import re
+import string
+import secrets
 from enum import Enum
 
 from faker.factory import Factory
@@ -168,6 +170,11 @@ def generate_dashost_pid() -> str:
 def generate_dllhost_uuid() -> str:
     id = uuid.uuid4().urn[9:]
     return "{" + f"{id}" + "}"
+
+def generate_password() -> str:
+    alphabet = string.printable
+    password = ''.join(secrets.choice(alphabet) for i in range(20))
+    return password
 
 # based on _ilove2pwn's https://gist.github.com/realoriginal/d9178c9b071707fec2d6de89a63e4709
 def generate_pipename(proc) -> str:
@@ -1171,9 +1178,11 @@ class Profile():
         if not operator_block:
             operators = Operators()
             for n in range(operator_num):
-                random_uesrname = fake.user_name()
-                random_password = fake.password()
-                operators.Add_User(random_uesrname, random_password)
+                random_username = None
+                random_password = None
+                random_username = fake.user_name()
+                random_password = generate_password()
+                operators.Add_User(random_username, random_password)
         else:
             operators = Operators()
             for op in operator_block:
@@ -1611,6 +1620,7 @@ class Writer(Base):
         operator_block = "Operators {"
         for operator in operators:
             operator_user = operator
+            print(f"{operators}")
             operator_pass = operators[operator_user]["Password"]
             operator_block += f"""
     user "{operator_user}" {{
@@ -1787,7 +1797,8 @@ class Writer(Base):
             with open(self.filename, 'w') as f:
                 f.write(profile_block)
         else:
-            print(profile_block)
+            pass
+            #print(profile_block)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -1949,7 +1960,7 @@ if __name__ == "__main__":
     else:
         MIN_PORT = 1024
         MAX_PORT = 65534
-        
+
     if args.operators != "Nothing":
         operators = int(args.operators)
 
