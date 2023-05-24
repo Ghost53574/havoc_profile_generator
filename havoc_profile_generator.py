@@ -1855,7 +1855,7 @@ if __name__ == "__main__":
                         action='store',
                         default="Nothing",
                         help='Set\'s the min port and max port for randomization')
-        parser.add_argument('-O', '--operators',
+    parser.add_argument('-O', '--operators',
                         type=str,
                         action='store',
                         default="Nothing",
@@ -1951,7 +1951,7 @@ if __name__ == "__main__":
         MAX_PORT = 65534
         
     if args.operators != "Nothing":
-        operators = args.operators
+        operators = int(args.operators)
 
     if args.listeners != "Nothing":
         listeners = args.listeners
