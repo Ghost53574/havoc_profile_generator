@@ -242,7 +242,7 @@ def get_random_port(port: int = None) -> int:
         return random.choice(range(int(MIN_PORT), int(MAX_PORT)))
     else:
         return port
-    
+
 def load_profiles() -> list:
     if not os.path.isdir(profile_dir):
         return None
@@ -283,7 +283,7 @@ def structure_list(entries: list) -> list:
     temp += " ]"
     return temp
 
-def parse_cs_profile(profile: dict, 
+def parse_cs_profile(profile: dict,
                      verb: str = "any"
                      ) -> str:
     sleep = None
@@ -439,13 +439,13 @@ def parse_cs_profile(profile: dict,
 
     return json.loads(parsed_profile)
 
-def Find(name, 
+def Find(name,
          _search_path = None):
     if _search_path:
         paths = _search_path
     else:
         paths = search_path.split(":")
-    for path in paths: 
+    for path in paths:
         for root, _, files in os.walk(path):
             if name in files:
                 return os.path.join(root, name)
@@ -460,25 +460,25 @@ def print_fail(message):
     raise Exception(f"{FAIL}[x] {message}{ENDC}")
 
 class Base:
-    def Find(self, 
+    def Find(self,
              name: str,
             _search_path: str = None):
         if _search_path:
             paths = _search_path
         else:
             paths = search_path.split(":")
-        for path in paths: 
+        for path in paths:
             for root, _, files in os.walk(path):
                 if name in files:
                     return os.path.join(root, name)
-                
+
     def Get(self) -> object:
         return self
-    
+
 class Build(Base):
-    def __init__(self, 
-                 compiler_64: str = None, 
-                 compiler_86: str = None, 
+    def __init__(self,
+                 compiler_64: str = None,
+                 compiler_86: str = None,
                  compiler_nasm: str = None) -> None:
         self.compiler_64 = None
         self.compiler_86 = None
@@ -502,7 +502,7 @@ class Build(Base):
             self.compiler_nasm = self.Find(default_assembler)
             if not self.compiler_nasm:
                 print_fail(f"Cannot find {default_assembler}")
-            
+
     def Print(self) -> dict:
         template = {}
         if self.compiler_64:
@@ -520,9 +520,9 @@ class Build(Base):
         return template
 
 class Teamserver(Base):
-    def __init__(self, 
-                 host: str, 
-                 port: int, 
+    def __init__(self,
+                 host: str,
+                 port: int,
                  build: Build = None) -> None:
         self.host = host
         self.port = port
@@ -548,13 +548,13 @@ class Teamserver(Base):
 class Operators(Base):
     def __init__(self) -> None:
         self.users = {}
-    
+
     def Add_User(self, username, password, hashed = None) -> None:
         if username and password and not hashed:
             self.users[username] = password
         if username and password and hashed:
             self.users[username] = {password, hashed}
-    
+
     def Print(self) -> dict:
         template = {}
         values = {}
@@ -567,32 +567,32 @@ class Operators(Base):
         else:
             print_fail("No users in Operator block")
         return template
-    
+
 class Cert(Base):
-    def __init__(self, 
-                 cert_path, 
+    def __init__(self,
+                 cert_path,
                  key_path) -> None:
         if os.path.isfile(cert_path):
             self.cert_path = cert_path
         else:
             print_fail("Certificate path does not exist")
-        
+
         if os.path.isfile(key_path):
             self.key_path = key_path
         else:
             print_fail("Key path does not exist")
-        
+
     def Print(self) -> dict:
         template = {}
         template["Cert"] = self.cert_path
         template["Key"] = self.key_path
         return template
-    
+
 class Proxy(Base):
-    def __init__(self, 
-                 host: str, 
-                 port: int, 
-                 username = None, 
+    def __init__(self,
+                 host: str,
+                 port: int,
+                 username = None,
                  password = None) -> None:
         self.host = host
         self.port = port
@@ -623,23 +623,23 @@ class Response(Base):
             headers.append(header)
         template["Headers"] = headers
         return template
-    
+
 class Http_Listener(Cert, Base):
     host_rotation_types = [ "random", "round-robin" ]
-    def __init__(self, 
-                 name: str, 
-                 hosts: list, 
-                 port: int, 
+    def __init__(self,
+                 name: str,
+                 hosts: list,
+                 port: int,
                  host_bind: str,
                  killswitch: str = None,
                  workinghours: str = None,
                  secure: str = None,
-                 host_rotation: str = None, 
-                 user_agent: str = None, 
-                 headers: list = None, 
-                 urls: list = None, 
-                 cert: Cert = None, 
-                 proxy: Proxy = None, 
+                 host_rotation: str = None,
+                 user_agent: str = None,
+                 headers: list = None,
+                 urls: list = None,
+                 cert: Cert = None,
+                 proxy: Proxy = None,
                  response: Response = None) -> None:
         self.name = name
         self.hosts = hosts
@@ -724,8 +724,8 @@ class Http_Listener(Cert, Base):
 
 class Smb_Listener(Cert, Base):
     host_rotation_types = [ "random", "round-robin" ]
-    def __init__(self, 
-                 name: str = None, 
+    def __init__(self,
+                 name: str = None,
                  pipename: str = None,
                  killdate: str = None,
                  workinghours: str = None) -> None:
@@ -749,7 +749,7 @@ class Smb_Listener(Cert, Base):
                 self.pipename = temp
             else:
                 print_fail("Failed to generate pipename")
-        
+
         if killdate:
             self.killdate = killdate
 
@@ -767,8 +767,8 @@ class Smb_Listener(Cert, Base):
         return template
 
 class External_Listener(Cert, Base):
-    def __init__(self, 
-                 name: str, 
+    def __init__(self,
+                 name: str,
                  endpoint: str) -> None:
         self.name = name
         self.endpoint = endpoint
@@ -784,18 +784,18 @@ class Listeners(Http_Listener, Smb_Listener):
         self.http_listeners = []
         self.smb_listeners = []
         self.ext_listeners = []
-    
-    def Add_Http_Listener(self, 
+
+    def Add_Http_Listener(self,
                           listener: Http_Listener
                           ) -> None:
         self.http_listeners.append(listener.Print())
 
-    def Add_Smb_Listener(self, 
+    def Add_Smb_Listener(self,
                          listener: Smb_Listener
                          ) -> None:
         self.smb_listeners.append(listener.Print())
 
-    def Add_External_Listener(self, 
+    def Add_External_Listener(self,
                              listener: External_Listener
                              ) -> None:
         self.ext_listeners.append(listener.Print())
@@ -818,10 +818,10 @@ class Listeners(Http_Listener, Smb_Listener):
 
     def Get(self) -> object:
         return self
-    
+
 class Header(Base):
-    def __init__(self, 
-                 MagicMzX64: str = None, 
+    def __init__(self,
+                 MagicMzX64: str = None,
                  MagicMzX86: str = None,
                 ) -> None:
         self.magicmzx64 = None
@@ -839,7 +839,7 @@ class Header(Base):
         if self.magicmzx86:
             template["MagicMzX86"] = self.magicmzx86
         return template
-    
+
 class Binary(Base):
     def __init__(self,
                  header: Header = None
@@ -856,8 +856,8 @@ class Binary(Base):
         return template
 
 class Implant(Base):
-    def __init__(self, 
-                 sleep_mask: str = None, 
+    def __init__(self,
+                 sleep_mask: str = None,
                  sleep_teq: str = None
                  ) -> None:
         self.sleep_mask = None
@@ -867,7 +867,7 @@ class Implant(Base):
         if sleep_teq:
             if sleep_teq in [ "WaitForSingleObject", "Foliage", "Ekko"]:
                 self.sleep_teq = sleep_teq
-            else:   
+            else:
                 self.sleep_teq = "WaitForSingleObject"
 
     def Print(self) -> str:
@@ -883,8 +883,8 @@ class Injection(Base):
     ARCH_X64 = "x64"
     ARCH_SYSWOW = "x86_64"
 
-    def __init__(self, 
-                 spawn_x64: str = None, 
+    def __init__(self,
+                 spawn_x64: str = None,
                  spawn_x86: str = None,
                  alloc: AllocEnum = None,
                  execute: ExecuteEnum = None,
@@ -933,7 +933,7 @@ class Injection(Base):
                     alloc = "Native/Syscall"
             else:
                 self.alloc = "None"
-        
+
         if execute:
             if execute in ExecuteEnum:
                 if execute is ExecuteEnum.Win32:
@@ -943,7 +943,7 @@ class Injection(Base):
             else:
                 self.execute = "None"
 
-    def Random(self, 
+    def Random(self,
                arch: Arch
                ) -> str:
         if arch == Arch.X64 or arch == Arch.X86:
@@ -952,7 +952,7 @@ class Injection(Base):
             windows_dir = f"{windows_dir_root}\\{windows_dir_syswow64}\\"
         else:
             return None
-        
+
         if arch == Arch.X86_64:
             prog = random.choice(default_spawnto_all)
         else:
@@ -964,7 +964,7 @@ class Injection(Base):
             spawn_to = f"{spawn_to}{generate_dashost_pid()}"
         elif prog == "dllhost":
             spawn_to = f"{spawn_to}{generate_dllhost_uuid()}"
-        
+
         return spawn_to
 
     def Print(self) -> dict:
@@ -1027,28 +1027,28 @@ class Demon(Base):
         return template
 
 class Service(Base):
-    def __init__(self, 
-                 endpoint: str, 
+    def __init__(self,
+                 endpoint: str,
                  password: str
                  ) -> None:
         if endpoint and password:
             self.endpoint = endpoint
             self.password = password
-    
+
     def Print(self) -> dict:
         template = {}
         template["Endpoint"] = self.endpoint
         template["Password"] = self.password
         return template
-    
+
 # Will define Webhook when more webhooks come out
 
 class Generator(Teamserver, Operators, Listeners, Demon, Service):
-    def __init__(self, 
-                 teamserver: Teamserver, 
-                 operators: Operators, 
-                 listeners: Listeners, 
-                 demon: Demon, 
+    def __init__(self,
+                 teamserver: Teamserver,
+                 operators: Operators,
+                 listeners: Listeners,
+                 demon: Demon,
                  service: Service = None
                  ) -> None:
         self.service = None
@@ -1096,16 +1096,17 @@ class Generator(Teamserver, Operators, Listeners, Demon, Service):
 
     def Get(self) -> object:
         return self
-    
+
 class Profile():
-    def __init__(self, 
+    def __init__(self,
                  quiet: bool,
-                 profiles: list, 
-                 profile: str = None, 
-                 config: str = None, 
-                 host: str = None, 
-                 port: int = None, 
-                 hosts: list = None, 
+                 profiles: list,
+                 profile: str = None,
+                 config: str = None,
+                 operator_num: str = None,
+                 host: str = None,
+                 port: int = None,
+                 hosts: list = None,
                  arch: Arch = None,
                  extra_listeners: list = None
                  ) -> object:
@@ -1169,9 +1170,10 @@ class Profile():
 
         if not operator_block:
             operators = Operators()
-            random_uesrname = fake.user_name()
-            random_password = fake.password()
-            operators.Add_User(random_uesrname, random_password)
+            for n in range(operator_num):
+                random_uesrname = fake.user_name()
+                random_password = fake.password()
+                operators.Add_User(random_uesrname, random_password)
         else:
             operators = Operators()
             for op in operator_block:
@@ -1268,7 +1270,7 @@ class Profile():
                 urls = profile_request
             else:
                 urls = default_urls
-            
+
             response = None
             if profile_response:
                 response = profile_response
@@ -1333,7 +1335,7 @@ class Profile():
                                 for i in range(number_hosts):
                                     temp.append(fake.ipv4())
                                 listener_hosts = temp
-                        
+
                         listener_bind = listener[listener_type].get("bind")
                         if not listener_bind and not host:
                             listener_bind = all_interfaces
@@ -1380,23 +1382,23 @@ class Profile():
                             listener_proxy_port = listener_proxy.get("port")
                             listener_proxy_user = listener_proxy.get("user")
                             listener_proxy_pass = listener_proxy.get("pass")
-                            listener_proxy = Proxy(listener_proxy_host, listener_proxy_port, 
+                            listener_proxy = Proxy(listener_proxy_host, listener_proxy_port,
                                                    listener_proxy_user, listener_proxy_pass)
                         listener_response = listener[listener_type].get("response")
                         if profile_response and not listener_response:
                             listener_response = profile_response
                         response = Response(listener_response)
                         listeners.Add_Http_Listener(Http_Listener(
-                            name=listener_name, 
+                            name=listener_name,
                             hosts=listener_hosts,
                             port=listener_port,
-                            host_bind=listener_bind, 
+                            host_bind=listener_bind,
                             host_rotation=listener_rotation,
                             killswitch=listener_killswitch,
                             workinghours=listener_workinghours,
-                            user_agent=listener_user_agent, 
+                            user_agent=listener_user_agent,
                             headers=listener_headers,
-                            urls=listener_urls, 
+                            urls=listener_urls,
                             secure=listener_secure,
                             cert=listener_cert,
                             proxy=listener_proxy,
@@ -1409,7 +1411,7 @@ class Profile():
                             listener_pipename = generate_pipename(profile_pipename)
                         listener_killdate = listener[listener_type].get("killdate")
                         listener_workinghours = listener[listener_type].get("workinghours")
-                        listeners.Add_Smb_Listener(Smb_Listener(listener_name, 
+                        listeners.Add_Smb_Listener(Smb_Listener(listener_name,
                                                                 listener_pipename,
                                                                 listener_killdate,
                                                                 listener_workinghours))
@@ -1516,7 +1518,7 @@ class Profile():
                     demon_spawn64 = f"{demon_spawn64_split[0]}\\\\{demon_spawn64_split[1]}\\\\{demon_spawn64_split[2]}\\\\{demon_spawn64_split[3]}"
                 else:
                     demon_spawn64 = None
-                
+
                 demon_alloc = injection.get("alloc")
                 if not demon_alloc and not profile_alloc:
                     demon_alloc = None
@@ -1529,9 +1531,19 @@ class Profile():
                     demon_execute = profile_execute
 
                 if demon_alloc:
-                    demon_alloc = AllocEnum(demon_alloc)
+                    if demon_alloc == "Syscall":
+                        demon_alloc = AllocEnum(1)
+                    elif demon_alloc == "Win32":
+                        demon_alloc = AllocEnum(0)
+                    else:
+                        demon_alloc = AllocEnum(2)
                 if demon_execute:
-                    demon_execute = ExecuteEnum(demon_execute)
+                    if demon_execute == "Win32":
+                        demon_execute = ExecuteEnum(0)
+                    elif demon_execute == "Syscall":
+                        demon_execute = ExecuteEnum(1)
+                    else:
+                        demon_execute = ExecuteEnum(2)
 
             demon_injection = Injection(spawn_x64=demon_spawn64,
                                         spawn_x86=demon_spawn32,
@@ -1544,10 +1556,10 @@ class Profile():
                           implant=demon_implant,
                           binary=demon_binary,
                           injection=demon_injection)
-        
-        self.generator = Generator(teamserver=teamserver, 
-                                   operators=operators, 
-                                   listeners=listeners, 
+
+        self.generator = Generator(teamserver=teamserver,
+                                   operators=operators,
+                                   listeners=listeners,
                                    demon=demon,
                                    service=service)
         if self.generator:
@@ -1558,17 +1570,17 @@ class Profile():
 
     def Print(self) -> dict:
         return self.generator.Print()
-    
+
     def Get(self) -> object:
         return self.generator
-    
+
 class Writer(Base):
-    def __init__(self, 
+    def __init__(self,
                  filename: str = None
                  ) -> None:
         self.filename = filename
 
-    def Write(self, 
+    def Write(self,
               profile) -> None:
 
         teamserver = profile["Teamserver"]
@@ -1579,7 +1591,7 @@ class Writer(Base):
 
         teamserver_host = teamserver["Host"]
         teamserver_port = teamserver["Port"]
-        
+
         build = teamserver["Build"]
         build_compiler64 = build["Compiler64"]
         build_compiler86 = build["Compiler86"]
@@ -1724,7 +1736,7 @@ class Writer(Base):
     Jitter = {demon_jitter}"""
         if demon_xforwardedfor:
             demon_block += f"""
-    TrustXForwardedFor = "{demon_xforwardedfor}" 
+    TrustXForwardedFor = "{demon_xforwardedfor}"
 """
         if demon_implant:
             demon_block += f"""
@@ -1744,7 +1756,7 @@ class Writer(Base):
         Header {{
 """
             if demon_binary_magicmzx64:
-                demon_block += f"            MagicMz-x64 = \"{demon_binary_magicmzx64}\""
+                demon_block += f"            MagicMz-x64 = \"{demon_binary_magicmzx64}\"\n"
             if demon_binary_magicmzx86:
                 demon_block += f"            MagicMz-x86 = \"{demon_binary_magicmzx86}\""
             demon_block += f"""
@@ -1770,7 +1782,7 @@ class Writer(Base):
             profile_block += service_block
         profile_block += demon_block
         profile_block = profile_block.replace("\'", "\"")
-        
+
         if self.filename:
             with open(self.filename, 'w') as f:
                 f.write(profile_block)
@@ -1781,78 +1793,83 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
             prog='Havoc profile generator',
             description='Generate havoc c2 profiles with ease and randomness')
-    parser.add_argument('-c', '--config', 
-                        type=argparse.FileType('r'), 
-                        required=False, 
+    parser.add_argument('-c', '--config',
+                        type=argparse.FileType('r'),
+                        required=False,
                         help='Config file to use, don\' use a conifg file for a completely random profile')
-    parser.add_argument('-r', '--read', 
-                        type=str, 
-                        action='store', 
-                        default="Nothing", 
-                        help='Directory to read CS profiles from')
-    parser.add_argument('-l', '--list', 
-                        type=str_to_bool, 
-                        nargs='?', 
-                        const=True, 
-                        default=False, 
-                        help='List supported profiles')
-    parser.add_argument('-s', '--sysnative', 
-                        type=str_to_bool, 
-                        nargs='?', 
-                        const=True, 
-                        default=False, 
-                        help='Only support sysnative for spawn to')
-    parser.add_argument('-a', '--arch', 
-                        type=str, 
-                        action='store', 
-                        default="Nothing", 
-                        help='Selected architecture between x86, x64 & x86_64')
-    parser.add_argument('-p', '--profile', 
-                        type=str, 
+    parser.add_argument('-r', '--read',
+                        type=str,
                         action='store',
-                        default="Nothing", 
+                        default="Nothing",
+                        help='Directory to read CS profiles from')
+    parser.add_argument('-l', '--list',
+                        type=str_to_bool,
+                        nargs='?',
+                        const=True,
+                        default=False,
+                        help='List supported profiles')
+    parser.add_argument('-s', '--sysnative',
+                        type=str_to_bool,
+                        nargs='?',
+                        const=True,
+                        default=False,
+                        help='Only support sysnative for spawn to')
+    parser.add_argument('-a', '--arch',
+                        type=str,
+                        action='store',
+                        default="Nothing",
+                        help='Selected architecture between x86, x64 & x86_64')
+    parser.add_argument('-p', '--profile',
+                        type=str,
+                        action='store',
+                        default="Nothing",
                         help='Select a traffic profile')
-    parser.add_argument('-H', '--host', 
-                        type=str, 
-                        action='store', 
-                        default="Nothing", 
+    parser.add_argument('-H', '--host',
+                        type=str,
+                        action='store',
+                        default="Nothing",
                         help='The listeners ip')
-    parser.add_argument('-S', '--hosts', 
-                        type=str, 
-                        action='store', 
-                        default="Nothing", 
+    parser.add_argument('-S', '--hosts',
+                        type=str,
+                        action='store',
+                        default="Nothing",
                         help='The hosts array in the form of 10.0.0.1,10.0.0.2')
-    parser.add_argument('-P', '--port', 
-                        type=str, 
-                        action='store', 
-                        default="Nothing", 
+    parser.add_argument('-P', '--port',
+                        type=str,
+                        action='store',
+                        default="Nothing",
                         help='Set the port for listeners to listen on')
-    parser.add_argument('-L', '--listeners', 
-                        type=str, 
-                        action='store', 
-                        default="Nothing", 
+    parser.add_argument('-L', '--listeners',
+                        type=str,
+                        action='store',
+                        default="Nothing",
                         help='Set the port for listeners to listen on')
-    parser.add_argument('-E', '--evasion', 
-                        type=str_to_bool, 
-                        nargs='?', 
-                        const=True, 
-                        default=False, 
+    parser.add_argument('-E', '--evasion',
+                        type=str_to_bool,
+                        nargs='?',
+                        const=True,
+                        default=False,
                         help='Set beacon defaults to be more evasive')
-    parser.add_argument('-M', '--mports', 
-                        type=str, 
-                        action='store', 
+    parser.add_argument('-M', '--mports',
+                        type=str,
+                        action='store',
                         default="Nothing",
                         help='Set\'s the min port and max port for randomization')
-    parser.add_argument('-o', '--outfile', 
-                        type=str, 
-                        action='store', 
-                        default="Nothing", 
+        parser.add_argument('-O', '--operators',
+                        type=str,
+                        action='store',
+                        default="Nothing",
+                        help='Number of operators to create')
+    parser.add_argument('-o', '--outfile',
+                        type=str,
+                        action='store',
+                        default="Nothing",
                         help='Output file of the final Havoc C2 pofile')
-    parser.add_argument('-q', '--quiet', 
-                        type=str_to_bool, 
-                        nargs='?', 
-                        const=True, 
-                        default=False, 
+    parser.add_argument('-q', '--quiet',
+                        type=str_to_bool,
+                        nargs='?',
+                        const=True,
+                        default=False,
                         help='Do not show banner')
     args = parser.parse_args()
 
@@ -1868,7 +1885,7 @@ if __name__ == "__main__":
     port = None
     arch = None
     listeners = None
-
+    operators = None
     cs_profiles = None
 
     if args.read != "Nothing":
@@ -1877,14 +1894,14 @@ if __name__ == "__main__":
         parsed_profiles = {}
         for i, cs_profile in enumerate(loaded_profiles.keys()):
             parsed_profile_name = loaded_profile_names[i]
-            parsed_profile_data = parse_cs_profile(profile=loaded_profiles[cs_profile], 
+            parsed_profile_data = parse_cs_profile(profile=loaded_profiles[cs_profile],
                                                    verb="any")
             parsed_profiles[parsed_profile_name] = parsed_profile_data
         loaded_profiles = loaded_profile_names
         loaded_profiles_data = parsed_profiles
     else:
         loaded_profiles = load_profiles()
-    
+
     if not loaded_profiles or not loaded_profiles_data:
         print_fail("Loaded profiles failed to load. Make sure there is a config directory with profile templates in it or a directory with CS profiles is specified")
 
@@ -1900,7 +1917,7 @@ if __name__ == "__main__":
         profile = args.profile
     else:
         profile = "any"
-    
+
     if args.arch != "Nothing":
         if args.arch == "x86_64":
             arch = Arch("x86_64")
@@ -1908,7 +1925,7 @@ if __name__ == "__main__":
             arch == Arch("x64")
         elif args.arch == "x86":
             arch == Arch("x86")
-    
+
     if args.host != "Nothing":
         host = args.host
 
@@ -1932,10 +1949,13 @@ if __name__ == "__main__":
     else:
         MIN_PORT = 1024
         MAX_PORT = 65534
+        
+    if args.operators != "Nothing":
+        operators = args.operators
 
     if args.listeners != "Nothing":
         listeners = args.listeners
-    
+
     if args.outfile != "Nothing":
         outfile = args.outfile
     else:
@@ -1962,11 +1982,12 @@ if __name__ == "__main__":
     listeners:   {listeners is not None}
     outfile:     {outfile is not None}
         """)
-    
+
     generated_profile = Profile(quiet=args.quiet,
                                 profiles=loaded_profiles,
                                 profile=profile,
                                 config=config,
+                                operator_num=operators,
                                 host=host,
                                 port=port,
                                 hosts=hosts,
