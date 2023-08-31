@@ -139,6 +139,8 @@ if __name__ == "__main__":
 
     profiles = None
 
+    loaded_profiles_data = {}
+
     if args.read != "Nothing":
         loaded_profiles = util.get_cs_profiles(args.read)
         loaded_profile_names = [ x.split("/")[-1] for x in list(loaded_profiles.keys()) ]
@@ -150,13 +152,13 @@ if __name__ == "__main__":
             parsed_profiles[parsed_profile_name] = parsed_profile_data
         profiles = util.Profiles(loaded_profile_names, parsed_profiles)
     else:
-        profiles = util.Profiles(util.load_profiles(), None)
+        profiles, loaded_profiles_data = util.load_profiles()
     
-    if not profiles.profile_names or not profiles.profiles:
+    if not profiles or not loaded_profiles_data:
         util.print_fail("Loaded profiles failed to load. Make sure there is a config directory with profile templates in it or a directory with CS profiles is specified")
 
     def list_profiles() -> None:
-            for profile in loaded_profiles:
+            for profile in profiles:
                 util.print_good(f"Profile: {profile}")
 
     if args.list:
@@ -226,8 +228,8 @@ if __name__ == "__main__":
         """)
     
     generated_profile = Profile(quiet=args.quiet,
-                                profile_names=profiles.profile_names,
-                                profiles=profiles.profiles,
+                                profile_names=profiles,
+                                profiles=loaded_profiles_data,
                                 profile=profile,
                                 sysnative=args.sysnative,
                                 evasion=args.evasion,
