@@ -8,20 +8,19 @@ class Writer(Base):
 
     def Write(self, 
               profile) -> None:
-
-        teamserver = profile["Teamserver"]
-        operators  = profile["Operators"]
-        listeners  = profile["Listeners"]
+        teamserver = profile.get("Teamserver")
+        operators  = profile.get("Operators")
+        listeners  = profile.get("Listeners")
         service    = profile.get("Service")
-        demon      = profile["Demon"]
+        demon      = profile.get("Demon")
 
-        teamserver_host = teamserver["Host"]
-        teamserver_port = teamserver["Port"]
+        teamserver_host = teamserver.get("Host")
+        teamserver_port = teamserver.get("Port")
         
         build = teamserver["Build"]
-        build_compiler64 = build["Compiler64"]
-        build_compiler86 = build["Compiler86"]
-        build_assembler  = build["Nasm"]
+        build_compiler64 = build.get("Compiler64")
+        build_compiler86 = build.get("Compiler86")
+        build_assembler  = build.get("Nasm")
 
         teamserver_block = f"""Teamserver {{
     Host = "{teamserver_host}"
