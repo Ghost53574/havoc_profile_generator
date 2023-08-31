@@ -62,6 +62,14 @@ def generate_dllhost_uuid() -> str:
     id = uuid.uuid4().urn[9:]
     return "{" + f"{id}" + "}"
 
+def get_nth_key(dictionary, n=0):
+    if n < 0:
+        n += len(dictionary)
+    for i, key in enumerate(dictionary.keys()):
+        if i == n:
+            return key
+    raise IndexError("dictionary index out of range") 
+
 # based on _ilove2pwn's https://gist.github.com/realoriginal/d9178c9b071707fec2d6de89a63e4709
 def generate_pipename(
         pid: int = None, 
@@ -90,7 +98,7 @@ def generate_pipename(
         'gecko': f'gecko.{pid}.{tid}.##################'
     }
     if not proc:
-        PipeName = PipeList[ random.randint( 0, len( PipeList ) - 1 ) ]
+        PipeName = PipeList[ get_nth_key(PipeList, random.randint( 0, len( PipeList ) - 1 )) ]
     else:
         PipeName = PipeList.get(proc)
 
@@ -143,11 +151,12 @@ def get_random_port(
     else:
         return port
     
-def load_profiles() -> list:
+def load_profiles() -> (list, dict):
     if not os.path.isdir(profile_dir):
         return None
     for _, _, files in os.walk(profile_dir):
         loaded_profiles = files
+    loaded_profiles_data = {}
     temp = []
     for f in loaded_profiles:
         if os.path.isfile(f"{profile_dir}/{f}"):
@@ -157,7 +166,7 @@ def load_profiles() -> list:
                 profile_data = json.loads(fe.read())
             temp.append(name)
             loaded_profiles_data[name] = profile_data
-    return temp
+    return (temp, loaded_profiles_data)
 
 def get_cs_profiles(path) -> dict:
     temp = []
