@@ -21,7 +21,6 @@ Proxy      = classes.Proxy
 Response   = classes.Response
 Demon      = classes.Demon
 Injection  = classes.Injection
-Implant    = classes.Implant
 Binary     = classes.Binary
 Header     = classes.Header
 Service    = classes.Service
@@ -298,7 +297,7 @@ class Profile():
                 response = profile_response
             http_listener = Http_Listener(name=name,
                                           hosts=hosts,
-                                          port=port,
+                                          port="80",
                                           host_bind=host,
                                           killswitch=None,
                                           workinghours=None,
@@ -482,17 +481,6 @@ class Profile():
                 demon_xforwardedfor = None
             elif not demon_xforwardedfor and profile_xforwardedfor:
                 demon_xforwardedfor = profile_xforwardedfor
-            demon_implant = dict(demon_block).get("implant")
-            if not demon_implant and not profile_sleep_teq:
-                demon_implant = None
-            elif not demon_implant and profile_sleep_teq:
-                demon_implant = Implant("1", profile_sleep_teq)
-            else:
-                demon_implant_sleepmask = dict(demon_implant).get("sleep_mask")
-                demon_implant_sleepteq  = dict(demon_implant).get("sleep_technique")
-                demon_implant = Implant(
-                    sleep_mask=demon_implant_sleepmask,
-                    sleep_teq=demon_implant_sleepteq)
             demon_binary = dict(demon_block).get("binary")
             if not demon_binary:
                 demon_binary = None
@@ -510,7 +498,6 @@ class Profile():
                     if type(demon_binary) is not Binary:
                         demon_binary = None
             injection = dict(demon_block).get("injection")
-
             if not injection:
                 demon_alloc = None
                 demon_execute = None
@@ -526,16 +513,14 @@ class Profile():
                 if not demon_spawn32 and not profile_spawnx86:
                     demon_spawn32 = None
                 elif not demon_spawn32 and profile_spawnx86 != "None":
-                    demon_spawn32_split = profile_spawnx86.split("\\")
-                    demon_spawn32 = f"{demon_spawn32_split[0]}\\\\{demon_spawn32_split[1]}\\\\{demon_spawn32_split[2]}\\\\{demon_spawn32_split[3]}"
+                    demon_spawn32 = str(profile_spawnx86).replace("\\", "\\\\")
                 else:
                     demon_spawn32 = None
                 demon_spawn64 = injection.get("spawn64")
                 if not demon_spawn64 and not profile_spawnx64:
                     demon_spawn64 = None
                 elif not demon_spawn64 and profile_spawnx64 != "None":
-                    demon_spawn64_split = profile_spawnx64.split("\\")
-                    demon_spawn64 = f"{demon_spawn64_split[0]}\\\\{demon_spawn64_split[1]}\\\\{demon_spawn64_split[2]}\\\\{demon_spawn64_split[3]}"
+                    demon_spawn64 = str(profile_spawnx64).replace("\\", "\\\\")
                 else:
                     demon_spawn64 = None
 
@@ -551,9 +536,19 @@ class Profile():
                     demon_execute = profile_execute
 
                 if demon_alloc:
-                    demon_alloc = AllocEnum(demon_alloc)
+                    if demon_alloc == "Win32":
+                        demon_alloc = AllocEnum(0)
+                    elif demon_alloc == "Syscall":
+                        demon_alloc = AllocEnum(1)
+                    elif demon_alloc == "Empty":
+                        demon_alloc = AllocEnum(2)
                 if demon_execute:
-                    demon_execute = ExecuteEnum(demon_execute)
+                    if demon_execute == "Win32":
+                        demon_execute = ExecuteEnum(0)
+                    elif demon_execute == "Syscall":
+                        demon_execute = ExecuteEnum(1)
+                    elif demon_execute == "Empty":
+                        demon_execute = ExecuteEnum(2)
 
             demon_injection = Injection(spawn_x64=demon_spawn64,
                                         spawn_x86=demon_spawn32,
@@ -564,7 +559,6 @@ class Profile():
             demon = Demon(sleep=demon_sleep,
                           jitter=demon_jitter,
                           xforwardedfor=demon_xforwardedfor,
-                          implant=demon_implant,
                           binary=demon_binary,
                           injection=demon_injection)
         
