@@ -247,6 +247,7 @@ class Http_Listener(Cert, Base):
                  hosts: list, 
                  port: int, 
                  host_bind: str,
+                 methode: str = None,
                  killswitch: str = None,
                  workinghours: str = None,
                  secure: str = None,
@@ -261,6 +262,7 @@ class Http_Listener(Cert, Base):
         self.hosts = hosts
         self.port = port
         self.host_bind = host_bind
+        self.methode = None
         self.killswitch = None
         self.workinghours = None
         self.host_rotation = None
@@ -272,6 +274,10 @@ class Http_Listener(Cert, Base):
         self.proxy = None
         self.reponse = None
 
+        if methode:
+            self.methode = methode
+        else:
+            self.methode = "post"
         if host_rotation in self.host_rotation_types:
             self.host_rotation = host_rotation
         else:
@@ -288,7 +294,7 @@ class Http_Listener(Cert, Base):
             self.urls = urls
         else:
             self.urls = [ "/" ]
-        if not secure:
+        if secure:
             self.secure = secure
         else:
             self.secure = "false"
@@ -315,6 +321,8 @@ class Http_Listener(Cert, Base):
         template["PortBind"] = self.port
         template["Hosts"] = self.hosts
         template["HostBind"] = self.host_bind
+        if self.methode:
+            template["Methode"] = self.methode
         template["KillDate"] = self.killswitch
         template["WorkingHours"] = self.workinghours
         if self.host_rotation:
@@ -439,14 +447,26 @@ class Header(Base):
     def __init__(self, 
                  MagicMzX64: str = None, 
                  MagicMzX86: str = None,
+                 CompileTime: str = None,
+                 ImageSizeX64: int = None,
+                 ImageSizeX86: int = None
                 ) -> None:
         self.magicmzx64 = None
         self.magicmzx86 = None
+        self.compiletime = None
+        self.imagesizex64 = None
+        self.imagesizex86 = None
 
         if MagicMzX64:
             self.magicmzx64 = MagicMzX64
         if MagicMzX86:
             self.magicmzx86 = MagicMzX86
+        if CompileTime:
+            self.compiletime = CompileTime
+        if ImageSizeX64:
+            self.imagesizex64 = ImageSizeX64
+        if ImageSizeX86:
+            self.imagesizex86 = ImageSizeX86
 
     def Print(self) -> str:
         template = {}
@@ -454,6 +474,12 @@ class Header(Base):
             template["MagicMzX64"] = self.magicmzx64
         if self.magicmzx86:
             template["MagicMzX86"] = self.magicmzx86
+        if self.compiletime:
+            template["CompileTime"] = self.compiletime
+        if self.imagesizex64:
+            template["ImageSizeX64"] = self.imagesizex64
+        if self.imagesizex86:
+            template["ImageSizeX86"] = self.imagesizex86
         return template
     
 class Binary(Base):
@@ -464,6 +490,7 @@ class Binary(Base):
                  ) -> None:
         self.header = None
         self.replace_strx64 = None
+        self.replace_strx86 = None
 
         if header:
             self.header = header
@@ -480,29 +507,6 @@ class Binary(Base):
             template["ReplaceStringX64"] = self.replace_strx64
         if self.replace_strx86:
             template["ReplaceStringX86"] = self.replace_strx86
-        return template
-
-class Implant(Base):
-    def __init__(self, 
-                 sleep_mask: str = None, 
-                 sleep_teq: str = None
-                 ) -> None:
-        self.sleep_mask = None
-        self.sleep_teq = None
-        if sleep_mask:
-            self.sleep_mask = sleep_mask
-        if sleep_teq:
-            if sleep_teq in [ "WaitForSingleObject", "Foliage", "Ekko"]:
-                self.sleep_teq = sleep_teq
-            else:   
-                self.sleep_teq = "WaitForSingleObject"
-
-    def Print(self) -> str:
-        template = {}
-        if self.sleep_mask:
-            template["SleepMask"] = self.sleep_mask
-        if self.sleep_teq:
-            template["SleepMaskTechnique"] = self.sleep_teq
         return template
 
 class Injection(Base):
@@ -554,20 +558,18 @@ class Injection(Base):
                 self.spawn_x86 = self.sysnative_binary
 
         if alloc:
-            if alloc in AllocEnum:
-                if alloc is AllocEnum.Win32:
-                    alloc = "Win32"
-                elif alloc is AllocEnum.Syscall:
-                    alloc = "Native/Syscall"
+            if alloc is AllocEnum.Win32:
+                self.alloc = "Win32"
+            elif alloc is AllocEnum.Syscall:
+                self.alloc = "Native/Syscall"
             else:
                 self.alloc = "None"
         
         if execute:
-            if execute in ExecuteEnum:
-                if execute is ExecuteEnum.Win32:
-                    execute = "Win32"
-                elif execute is ExecuteEnum.Syscall:
-                    execute = "Native/Syscall"
+            if execute is ExecuteEnum.Win32:
+                self.execute = "Win32"
+            elif execute is ExecuteEnum.Syscall:
+                self.execute = "Native/Syscall"
             else:
                 self.execute = "None"
 
@@ -575,9 +577,9 @@ class Injection(Base):
                arch: Arch
                ) -> str:
         if arch == Arch.X64 or arch == Arch.X86:
-            windows_dir = f"{windows_dir_root}\\{windows_dir_sysnative}\\\\"
+            windows_dir = f"{windows_dir_root}\\{windows_dir_sysnative}\\"
         elif arch == Arch.X86_64:
-            windows_dir = f"{windows_dir_root}\\{windows_dir_syswow64}\\\\"
+            windows_dir = f"{windows_dir_root}\\{windows_dir_syswow64}\\"
         else:
             return None
 
@@ -606,21 +608,31 @@ class Injection(Base):
         if self.execute:
             template["Execute"] = self.execute
         return template
-
+# implant: Implant = None,
 class Demon(Base):
     def __init__(self,
                  sleep: int,
                  jitter: int,
-                 xforwardedfor: str = None,
-                 implant: Implant = None,
+                 indirectsyscall: bool = False,
+                 stackduplication: bool = False,
+                 sleepteq: str = None,
+                 proxyloading: str = None,
+                 amsietwpatching: str = None,
+                 injection: Injection = None,
+                 dotnetpipe: str = None,
                  binary: Binary = None,
-                 injection: Injection = None
+                 xforwardedfor: str = None
                  ) -> None:
         self.sleep = None
-        self.injection = None
         self.jitter = None
+        self.indirectsyscall = None
+        self.stackduplication = None
+        self.sleepteq = None
+        self.proxyloading = None
+        self.amsietwpatching = None
+        self.injection = None
+        self.dotnetpipe = None
         self.xforwardedfor = None
-        self.implant = None
         self.binary = None
 
         if sleep:
@@ -631,29 +643,56 @@ class Demon(Base):
             self.jitter = jitter
         else:
             self.jitter = 15
-        if xforwardedfor:
-            self.xforwardedfor = xforwardedfor
-        if implant:
-            self.implant = implant
-        if binary:
-            self.binary = binary
+        if indirectsyscall:
+            self.indirectsyscall = indirectsyscall
+        if stackduplication:
+            self.stackduplication = stackduplication
+        if sleepteq:
+            if sleepteq in [ "WaitForSingleObject", "Foliage", "Ekko", "Zilean" ]:
+                self.sleepteq = sleepteq
+            else:   
+                self.sleepteq = "WaitForSingleObject"
+        if proxyloading:
+            if proxyloading in [ "RtlRegisterWait", "RtlCreateTimer", "RtlQueueWorkItem" ]:
+                self.proxyloading = proxyloading
+            else:
+                self.proxyloading = None
+        if amsietwpatching is "HWBP":
+            self.amsietwpatching = amsietwpatching
         if injection:
             self.injection = injection
         else:
             self.injection = Injection(None, None)
+        if dotnetpipe:
+            self.dotnetpipe = dotnetpipe
+        if binary:
+            self.binary = binary
+        if xforwardedfor:
+            self.xforwardedfor = xforwardedfor
 
     def Print(self) -> dict:
         template = {}
         template["Sleep"] = self.sleep
         template["Jitter"] = self.jitter
-        if self.xforwardedfor:
-            template["TrustXForwardedFor"] = self.xforwardedfor
-        if self.implant:
-            template["Implant"] = self.implant.Print()
-        if self.binary:
-            template["Binary"] = self.binary.Print()
+        if self.indirectsyscall:
+            template["IndirectSyscall"] = self.indirectsyscall
+        if self.stackduplication:
+            template["StackDuplication"] = self.stackduplication
+        if self.sleepteq:
+            template["SleepTechnique"] = self.sleepteq
+        if self.proxyloading:
+            template["ProxyLoading"] = self.proxyloading
+        if self.amsietwpatching:
+            template["AmsiEtwPatching"] = self.amsietwpatching
         if self.injection:
             template["Injection"] = self.injection.Print()
+        if self.dotnetpipe:
+            template["DotNetNamePipe"] = self.dotnetpipe
+        if self.binary:
+            template["Binary"] = self.binary.Print()
+        if self.xforwardedfor:
+            template["TrustXForwardedFor"] = self.xforwardedfor
+
         return template
 
 class Service(Base):
