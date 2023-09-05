@@ -37,15 +37,6 @@ windows_dir_syswow64 = "\\SysWow64"
 
 loaded_profiles_data = {}
 
-class Profiles():
-    def __init__(self, names, profiles) -> None:
-        self.profile_names = None
-        self.profiles = None
-        if names:
-            self.profile_names = names
-        if profiles:
-            self.profiles = profiles
-
 def str_to_bool(value):
     if value.lower() in {'false', 'f', '0', 'no', 'n'}:
         return False
@@ -148,6 +139,8 @@ def get_random_port(
         if not max_port:
             max_port = 65535
         return random.choice(range(min_port, max_port))
+    elif not port:
+        return random.choice(range(1024, 65535))
     else:
         return port
     
@@ -345,7 +338,6 @@ def parse_cs_profile(profile: dict,
     "Spawnx86": "{spawnx86}",
     "Spawnx64": "{spawnx64}"
 }}"""
-
     return json.loads(parsed_profile)
 
 def Find(name, 
