@@ -144,13 +144,12 @@ if __name__ == "__main__":
     if args.read != "Nothing":
         loaded_profiles = util.get_cs_profiles(args.read)
         loaded_profile_names = [ x.split("/")[-1] for x in list(loaded_profiles.keys()) ]
-        parsed_profiles = {}
         for i, cs_profile in enumerate(loaded_profiles.keys()):
             parsed_profile_name = loaded_profile_names[i]
             parsed_profile_data = util.parse_cs_profile(profile=loaded_profiles[cs_profile], 
                                                    verb="any")
-            parsed_profiles[parsed_profile_name] = parsed_profile_data
-        profiles = util.Profiles(loaded_profile_names, parsed_profiles)
+            loaded_profiles_data[parsed_profile_name] = parsed_profile_data
+        profiles = loaded_profile_names
     else:
         profiles, loaded_profiles_data = util.load_profiles()
     
