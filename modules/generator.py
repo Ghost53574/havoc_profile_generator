@@ -5,6 +5,7 @@ from . import enum
 from faker import Factory
 import random
 import json
+import os
 
 Faker = Factory.create
 fake = Faker()
@@ -59,6 +60,44 @@ default_pipenames = [
     "trkwks"
 ]
 
+default_http_listener_name = "Agent Listener - HTTP"
+default_https_listener_name = "Agent Listener - HTTP/s"
+default_smb_listener_name = "Pivot - Smb"
+
+default_listener_host = os.listdir("/sys/class/net")[0]
+
+default_http_listener = Http_Listener(name=default_http_listener_name,
+                                          hosts=[ default_listener_host ],
+                                          port="80",
+                                          host_bind=default_listener_host,
+                                          killswitch=None,
+                                          workinghours=None,
+                                          secure="false",
+                                          host_rotation=None,
+                                          user_agent=default_user_agent,
+                                          headers=default_headers,
+                                          urls=default_urls,
+                                          cert=None,
+                                          proxy=None,
+                                          response=default_response)
+
+default_https_listener = Http_Listener(name=default_http_listener_name,
+                                          hosts=[ default_listener_host ],
+                                          port="443",
+                                          host_bind=default_listener_host,
+                                          killswitch=None,
+                                          workinghours=None,
+                                          secure="true",
+                                          host_rotation=None,
+                                          user_agent=default_user_agent,
+                                          headers=default_headers,
+                                          urls=default_urls,
+                                          cert=None,
+                                          proxy=None,
+                                          response=default_response)
+
+default_smb_listener = Smb_Listener(default_smb_listener_name)
+
 class Generator(Teamserver, Operators, Listeners, Demon, Service):
     def __init__(self, 
                  teamserver: Teamserver, 
@@ -69,21 +108,23 @@ class Generator(Teamserver, Operators, Listeners, Demon, Service):
                  ) -> None:
         self.service = None
 
-        if teamserver:
+        if teamserver is not None:
             self.teamserver = teamserver
         else:
             util.print_fail("Need a teamserver config")
-        if operators:
+        if operators is not None:
             self.operators = operators
         else:
             util.print_fail("Need at least one operator config")
-        if listeners:
+        if listeners is not None:
             self.listeners = listeners
         else:
             util.print_fail("Need a listener config")
-        if Service:
+        if Service is not None:
             self.service = service
-        if demon:
+        else:
+            util.print_warn("Not using a service config")
+        if demon is not None:
             self.demon = demon
         else:
             util.print_fail("Need a demon config")
@@ -148,12 +189,12 @@ class Profile():
 
         if config:
             self.config = json.loads("".join(config))
+
             teamserver_host = self.config.get("ts_host")
             teamserver_port = self.config.get("ts_port")
             build_compiler_x64 = self.config.get("compiler_x64")
             build_compiler_x86 = self.config.get("compiler_x86")
             build_assembler = self.config.get("assembler")
-
             operator_block = self.config.get("users")
             listeners_block = self.config.get("listeners")
             service_block = self.config.get("service")
@@ -163,6 +204,7 @@ class Profile():
             teamserver_port = util.get_random_port(
                 min_port=int(min_port), 
                 max_port=int(max_port))
+            
             build_compiler_x64 = default_compiler_x64
             build_compiler_x86 = default_compiler_x86
             build_assembler = default_assembler
@@ -227,9 +269,12 @@ class Profile():
         profile_jitter = None
         profile_spawnx64 = None
         profile_spawnx86 = None
-        profile_alloc = None
-        profile_execute = None
+        profile_indirectsyscall = None
+        profile_stackdup = None
         profile_sleep_teq = None
+        profile_proxyloading = None
+        profile_amsietwpatching = None
+        profile_dotnetpipe = None
         profile_pipename = None
         profile_xforwardedfor = None
 
@@ -243,7 +288,11 @@ class Profile():
             profile_xforwardedfor = profile_data.get("TrustXForwardedFor")
             profile_spawnx64 = profile_data.get("Spawnx64")
             profile_spawnx86 = profile_data.get("Spawnx86")
+            profile_indirectsyscall = profile_data.get("IndirectSyscall")
+            profile_stackdup = profile_data.get("StackDuplication")
             profile_sleep_teq = profile_data.get("SleepTechnique")
+            profile_amsipatch = profile_data.get("AmsiEtwPatching")
+            profile_dotnetpipe = profile_data.get("DotNetNamePipe")
             profile_alloc = profile_data.get("Alloc")
             profile_execute = profile_data.get("Execute")
             profile_pipename = profile_data.get("Pipename")
@@ -253,11 +302,21 @@ class Profile():
         if not listeners_block:
             if not quiet:
                 util.print_good("Loading random listeners")
+            if not port:
+                port = util.get_random_port()
+            if not host:
+                host = all_interfaces
             if not hosts:
                 temp = []
                 number_hosts = random.choice(range(1, 20))
                 for i in range(number_hosts):
                     temp.append(fake.ipv4())
+                if host == all_interfaces:
+                    for interface in os.listdir("/sys/class/net"):
+                        if interface != "lo":
+                            temp.append(util.get_ip_address(interface))
+                else:
+                    temp.append(host)
                 hosts = temp
             else:
                 temp = []
@@ -271,21 +330,19 @@ class Profile():
                 else:
                     temp = [ hosts ]
                 hosts = temp
-            if not port:
-                port = util.get_random_port()
-            if not host:
-                host = all_interfaces
-            name = "Http"
+
             user_agent = None
             if profile_user_agent:
                 user_agent = profile_user_agent
             else:
-                user_agent = fake.user_agent()
+                user_agent = default_user_agent
+            
             headers = None
             if profile_headers:
                 headers = profile_headers
             else:
                 headers = default_headers
+            
             urls = None
             if profile_request:
                 urls = profile_request
@@ -295,7 +352,10 @@ class Profile():
             response = None
             if profile_response:
                 response = profile_response
-            http_listener = Http_Listener(name=name,
+            else:
+                response = default_response
+
+            http_listener = Http_Listener(name=default_http_listener_name,
                                           hosts=hosts,
                                           port="80",
                                           host_bind=host,
@@ -310,8 +370,7 @@ class Profile():
                                           proxy=None,
                                           response=response)
             listeners.Add_Http_Listener(http_listener)
-            name = "Agent Listener - HTTP/s"
-            https_listener = Http_Listener(name=name,
+            https_listener = Http_Listener(name=default_https_listener_name,
                                           hosts=hosts,
                                           port="443",
                                           host_bind=host,
@@ -326,8 +385,7 @@ class Profile():
                                           proxy=None,
                                           response=response)
             listeners.Add_Http_Listener(https_listener)
-            smb_listener = Smb_Listener("Pivot - Smb")
-            listeners.Add_Smb_Listener(smb_listener)
+            listeners.Add_Smb_Listener(default_smb_listener_name)
         else:
             for listener in listeners_block:
                 for listener_type in listener.keys():
@@ -349,11 +407,19 @@ class Profile():
                                 temp = [ hosts ]
                             listener_hosts = temp
                         elif not listener_hosts and not hosts:
-                                temp = []
-                                number_hosts = random.choice(range(1, 20))
-                                for i in range(number_hosts):
-                                    temp.append(fake.ipv4())
-                                listener_hosts = temp
+                            temp = []
+                            number_hosts = random.choice(range(1, 20))
+                            for i in range(number_hosts):
+                                temp.append(fake.ipv4())
+                            if host == all_interfaces:
+                                for interface in os.listdir("/sys/class/net"):
+                                    if interface != "lo":
+                                        temp.append(util.get_ip_address(interface))
+                            else:
+                                temp.append(host)
+                            listener_hosts = temp
+
+                        # stop
                         
                         listener_bind = listener[listener_type].get("bind")
                         if not listener_bind and not host:
@@ -386,6 +452,7 @@ class Profile():
                         listener_workinghours = listener[listener_type].get("workinghours")
                         if not listener_workinghours:
                             listener_workinghours = util.generate_workinghours(None, None)
+
                         listener_cert = listener[listener_type].get("cert")
                         if not listener_cert:
                             listener_cert = None
@@ -393,6 +460,7 @@ class Profile():
                             listener_cert_cert = listener_cert.get("cert")
                             listener_cert_key  = listener_cert.get("key")
                             listener_cert = Cert(listener_cert_cert, listener_cert_key)
+
                         listener_proxy = listener[listener_type].get("proxy")
                         if not listener_proxy:
                             listener_proxy = None
@@ -403,10 +471,12 @@ class Profile():
                             listener_proxy_pass = listener_proxy.get("pass")
                             listener_proxy = Proxy(listener_proxy_host, listener_proxy_port, 
                                                    listener_proxy_user, listener_proxy_pass)
+                            
                         listener_response = listener[listener_type].get("response")
                         if profile_response and not listener_response:
                             listener_response = profile_response
                         response = Response(listener_response)
+
                         listeners.Add_Http_Listener(Http_Listener(
                             name=listener_name, 
                             hosts=listener_hosts,

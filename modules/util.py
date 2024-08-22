@@ -5,6 +5,10 @@ import math
 import json
 import random
 import datetime
+import struct
+import fcntl
+import socket
+from OpenSSL import crypto, SSL
 from faker import Factory
 
 import mpp
@@ -35,6 +39,9 @@ windows_dir_root = "C:\\\\Windows"
 windows_dir_sysnative = "\\System32"
 windows_dir_syswow64 = "\\SysWow64"
 
+ssl_cert_file = "havoc.crt"
+ssl_key_file = "havoc.key"
+
 loaded_profiles_data = {}
 
 def str_to_bool(value):
@@ -43,6 +50,14 @@ def str_to_bool(value):
     elif value.lower() in {'true', 't', '1', 'yes', 'y'}:
         return True
     raise ValueError(f'{value} is not a valid boolean value')
+
+def get_ip_address(ifname):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    return socket.inet_ntoa(fcntl.ioctl(
+        s.fileno(),
+        0x8915,  # SIOCGIFADDR
+        struct.pack('256s', ifname[:15])
+    )[20:24])
 
 def generate_dashost_pid() -> str:
     id = uuid.uuid4().urn[9:].split("-")
@@ -339,6 +354,38 @@ def parse_cs_profile(profile: dict,
     "Spawnx64": "{spawnx64}"
 }}"""
     return json.loads(parsed_profile)
+
+def create_self_signed_cert(
+        rsa_key_len: int = 1024,
+        san_c: str = "UK",
+        san_st: str = "London",
+        san_l: str = "London",
+        san_o: str = "Dummy Company Ltd",
+        san_ou: str = "Dummy Company Ltd",
+        san_cn: str = "dummy.domain"
+):
+    k = crypto.PKey()
+    k.generate_key(crypto.TYPE_RSA, rsa_key_len)
+
+    cert = crypto.X509()
+    cert.get_subject().C = san_c
+    cert.get_subject().ST = san_st
+    cert.get_subject().L = san_l
+    cert.get_subject().O = san_o
+    cert.get_subject().OU = san_ou
+    cert.get_subject().CN = san_cn
+    cert.set_serial_number(1000)
+    cert.set_version(3)
+    cert.gmtime_adj_notBefore(0)
+    cert.gmtime_adj_notAfter(10*365*24*60*60)
+    cert.set_issuer(cert.get_subject())
+    cert.set_pubkey(k)
+    cert.sign(k, 'sha1')
+
+    open(ssl_cert_file, "wt").write(
+        crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
+    open(ssl_key_file, "wt").write(
+        crypto.dump_privatekey(crypto.FILETYPE_PEM, k))
 
 def Find(name, 
          _search_path = None):
