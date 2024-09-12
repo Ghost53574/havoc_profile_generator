@@ -131,6 +131,7 @@ if __name__ == "__main__":
     hosts = None
     port = None
     arch = None
+    sysnative = False
     listeners = None
 
     cs_profiles = None
@@ -146,8 +147,7 @@ if __name__ == "__main__":
         loaded_profile_names = [ x.split("/")[-1] for x in list(loaded_profiles.keys()) ]
         for i, cs_profile in enumerate(loaded_profiles.keys()):
             parsed_profile_name = loaded_profile_names[i]
-            parsed_profile_data = util.parse_cs_profile(profile=loaded_profiles[cs_profile], 
-                                                   verb="any")
+            parsed_profile_data = util.parse_cs_profile(profile=loaded_profiles[cs_profile], verb="any")
             loaded_profiles_data[parsed_profile_name] = parsed_profile_data
         profiles = loaded_profile_names
     else:
@@ -176,6 +176,9 @@ if __name__ == "__main__":
             arch == Arch("x64")
         elif args.arch == "x86":
             arch == Arch("x86")
+            
+    if args.sysnative:
+        sysnative = True
     
     if args.host != "Nothing":
         host = args.host
@@ -230,7 +233,7 @@ if __name__ == "__main__":
                                 profile_names=profiles,
                                 profiles=loaded_profiles_data,
                                 profile=profile,
-                                sysnative=args.sysnative,
+                                sysnative=sysnative,
                                 evasion=args.evasion,
                                 min_port=min_port,
                                 max_port=max_port,
