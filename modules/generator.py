@@ -167,9 +167,9 @@ class Profile():
                  max_port: str = None,
                  host: str = None, 
                  port: int = None, 
-                 hosts: list = None, 
-                 arch: Arch = None,
-                 extra_listeners: list = None
+                 hosts: list = None,
+                 extra_listeners: list = None,
+                 arch: Arch = None
                  ) -> object:
         self.profile = None
         self.config = None
@@ -357,8 +357,9 @@ class Profile():
 
             http_listener = Http_Listener(name=default_http_listener_name,
                                           hosts=hosts,
-                                          port="80",
+                                          port_bind="80",
                                           host_bind=host,
+                                          port_conn=None,
                                           killswitch=None,
                                           workinghours=None,
                                           secure="false",
@@ -372,8 +373,9 @@ class Profile():
             listeners.Add_Http_Listener(http_listener)
             https_listener = Http_Listener(name=default_https_listener_name,
                                           hosts=hosts,
-                                          port="443",
+                                          port_bind="443",
                                           host_bind=host,
+                                          port_conn=None,
                                           killswitch=None,
                                           workinghours=None,
                                           secure="true",
@@ -428,9 +430,12 @@ class Profile():
                             listener_bind = host
                         elif not listener_bind and host:
                             listener_bind = host
-                        listener_port = listener[listener_type].get("port")
-                        if not listener_port:
-                            listener_port = util.get_random_port()
+                        listener_port_bind = listener[listener_type].get("port_bind")
+                        if not listener_port_bind:
+                            listener_port_bind = util.get_random_port()
+                        listener_port_conn = listener[listener_type].get("port_conn")
+                        if not listener_port_conn:
+                            listener_port_conn = util.get_random_port()
                         listener_rotation = listener[listener_type].get("rotation")
                         if not listener_rotation:
                             listener_rotation = random.choice([ "random", "round-robin" ])
@@ -480,8 +485,9 @@ class Profile():
                         listeners.Add_Http_Listener(Http_Listener(
                             name=listener_name, 
                             hosts=listener_hosts,
-                            port=listener_port,
-                            host_bind=listener_bind, 
+                            port_bind=listener_port_bind,
+                            host_bind=listener_bind,
+                            port_conn=listener_port_conn,
                             host_rotation=listener_rotation,
                             killswitch=listener_killswitch,
                             workinghours=listener_workinghours,
@@ -528,10 +534,12 @@ class Profile():
             else:
                 service = Service(endpoint=service_endpoint, password=service_password)
 
+        # Add in the missing Demon block configuration arguments
+
         if not quiet:
             util.print_good("Creating a demon :)")
         if not demon_block:
-            injection = Injection(arch=arch, sysnative=sysnative)
+            injection = Injection(spawn_x64=None, spawn_x86=None, sysnative=sysnative)
             sleep = random.choice(range(12, 60))
             jitter = random.choice(range(5, 70))
             demon = Demon(sleep=sleep, jitter=jitter, injection=injection)
@@ -569,8 +577,6 @@ class Profile():
                         demon_binary = None
             injection = dict(demon_block).get("injection")
             if not injection:
-                demon_alloc = None
-                demon_execute = None
                 demon_spawn32 = None
                 demon_spawn64 = None
 
@@ -594,37 +600,8 @@ class Profile():
                 else:
                     demon_spawn64 = None
 
-                demon_alloc = injection.get("alloc")
-                if not demon_alloc and not profile_alloc:
-                    demon_alloc = None
-                elif not demon_alloc and profile_alloc:
-                    demon_alloc = profile_alloc
-                demon_execute = injection.get("execute")
-                if not demon_execute and not profile_execute:
-                    demon_execute = None
-                elif not demon_execute and profile_execute:
-                    demon_execute = profile_execute
-
-                if demon_alloc:
-                    if demon_alloc == "Win32":
-                        demon_alloc = AllocEnum(0)
-                    elif demon_alloc == "Syscall":
-                        demon_alloc = AllocEnum(1)
-                    elif demon_alloc == "Empty":
-                        demon_alloc = AllocEnum(2)
-                if demon_execute:
-                    if demon_execute == "Win32":
-                        demon_execute = ExecuteEnum(0)
-                    elif demon_execute == "Syscall":
-                        demon_execute = ExecuteEnum(1)
-                    elif demon_execute == "Empty":
-                        demon_execute = ExecuteEnum(2)
-
             demon_injection = Injection(spawn_x64=demon_spawn64,
                                         spawn_x86=demon_spawn32,
-                                        alloc=demon_alloc,
-                                        execute=demon_execute,
-                                        arch=arch,
                                         sysnative=sysnative)
             demon = Demon(sleep=demon_sleep,
                           jitter=demon_jitter,
