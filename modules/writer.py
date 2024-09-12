@@ -50,7 +50,8 @@ class Writer(Base):
                 listener_name = listener[listener_type].get("Name")
 
                 if listener_type == "Http":
-                    listener_port = listener[listener_type].get("PortBind")
+                    listener_port_bind = listener[listener_type].get("PortBind")
+                    listener_conn_bind = listener[listener_type].get("ConnBind")
                     listener_hosts = listener[listener_type].get("Hosts")
                     listener_bind  = listener[listener_type].get("HostBind")
                     listener_killdate = listener[listener_type].get("KillDate")
@@ -72,8 +73,8 @@ class Writer(Base):
         Hosts        =  {listener_hosts}
         HostBind     = "{listener_bind}"
         HostRotation = "{listener_rotation}"
-        PortBind     =  {listener_port}
-        PortConn     =  {listener_port}
+        PortBind     =  {listener_port_bind}
+        PortConn     =  {listener_conn_bind}
         Secure       =  {listener_secure}
         UserAgent    = "{listener_user_agent}"
         Uris         =  {listener_urls}
@@ -139,7 +140,7 @@ class Writer(Base):
                 service_block = None
         else:
             service_block = None
-
+        # Fix representation of Sleep and other values in the Demon build profile
         demon_sleep = demon["Sleep"]
         demon_jitter = demon["Jitter"]
         demon_xforwardedfor = demon.get("TrustXForwardedFor")
@@ -154,8 +155,6 @@ class Writer(Base):
         demon_injection = demon["Injection"]
         injection_spawn64 = demon_injection["Spawn64"]
         injection_spawn32 = demon_injection["Spawn86"]
-        injection_alloc = demon_injection.get("Alloc")
-        injection_execute = demon_injection.get("Execute")
         demon_block = f"""Demon {{
     Sleep  = {demon_sleep}
     Jitter = {demon_jitter}"""
@@ -192,13 +191,6 @@ class Writer(Base):
     Injection {{
         Spawn64 = "{injection_spawn64}"
         Spawn32 = "{injection_spawn32}" """
-
-        if injection_alloc:
-            demon_block += f"""
-        Alloc = "{injection_alloc}" """
-        if injection_execute:
-            demon_block += f"""
-        Execute = "{injection_execute}" """
         demon_block += f"""
     }}
 }}"""
