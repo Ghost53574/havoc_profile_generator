@@ -205,11 +205,13 @@ class Cert(Base):
         return template
     
 class Proxy(Base):
-    def __init__(self, 
+    def __init__(self,
+                 proxy_type: str,
                  host: str, 
                  port: int, 
                  username = None, 
                  password = None) -> None:
+        self.proxy_type = proxy_type
         self.host = host
         self.port = port
         self.username = None
@@ -220,6 +222,10 @@ class Proxy(Base):
 
     def Print(self) -> dict:
         template = {}
+        if self.proxy_type in [ "http", "https" ]:
+            template["Type"] = self.proxy_type
+        else:
+            template["Type"] = "http"
         template["Host"] = self.host
         template["Port"] = self.port
         if self.username and self.password:
@@ -244,9 +250,10 @@ class Http_Listener(Cert, Base):
     host_rotation_types = [ "random", "round-robin" ]
     def __init__(self, 
                  name: str, 
-                 hosts: list, 
-                 port: int, 
+                 hosts: list,
                  host_bind: str,
+                 port_bind: int, 
+                 port_conn: int = None,
                  methode: str = None,
                  killswitch: str = None,
                  workinghours: str = None,
@@ -254,14 +261,16 @@ class Http_Listener(Cert, Base):
                  host_rotation: str = None, 
                  user_agent: str = None, 
                  headers: list = None, 
+                 host_header: str = None,
                  urls: list = None, 
                  cert: Cert = None, 
                  proxy: Proxy = None, 
                  response: Response = None) -> None:
         self.name = name
         self.hosts = hosts
-        self.port = port
+        self.port_bind = port_bind
         self.host_bind = host_bind
+        self.port_conn = None
         self.methode = None
         self.killswitch = None
         self.workinghours = None
@@ -269,11 +278,14 @@ class Http_Listener(Cert, Base):
         self.secure = None
         self.user_agent = None
         self.headers = None
+        self.host_header = None
         self.urls = None
         self.cert = None
         self.proxy = None
         self.reponse = None
 
+        if port_conn:
+            self.port_conn = port_conn
         if methode:
             self.methode = methode
         else:
@@ -290,6 +302,8 @@ class Http_Listener(Cert, Base):
             self.headers = headers
         else:
             self.headers = [ "Content-type: */*" ]
+        if host_header:
+            self.host_header = host_header
         if urls:
             self.urls = urls
         else:
@@ -318,9 +332,11 @@ class Http_Listener(Cert, Base):
     def Print(self) -> dict:
         template = {}
         template["Name"] = self.name
-        template["PortBind"] = self.port
+        template["PortBind"] = self.port_bind
         template["Hosts"] = self.hosts
         template["HostBind"] = self.host_bind
+        if self.port_conn:
+            template["PortConn"] = self.port_conn
         if self.methode:
             template["Methode"] = self.methode
         template["KillDate"] = self.killswitch
@@ -333,6 +349,8 @@ class Http_Listener(Cert, Base):
             template["Secure"] = self.secure
         else:
             template["Secure"] = "false"
+        if self.host_header:
+            template["HostHeader"] = self.host_header
         template["UserAgent"] = self.user_agent
         template["Urls"] = self.urls
         template["Headers"] = self.headers
@@ -485,8 +503,8 @@ class Header(Base):
 class Binary(Base):
     def __init__(self,
                  header: Header = None,
-                 replace_strx64: str = None,
-                 replace_strx86: str = None
+                 replace_strx64: dict = None,
+                 replace_strx86: dict = None
                  ) -> None:
         self.header = None
         self.replace_strx64 = None
@@ -498,15 +516,20 @@ class Binary(Base):
             self.replace_strx64 = replace_strx64
         if replace_strx86:
             self.replace_strx86 = replace_strx86
+            
+    def ParseReplaceStrings(
+        replacement_strings: dict
+        ) -> str:
+        ""
 
     def Print(self) -> str:
         template = {}
         if self.header:
             template["Header"] = self.header.Print()
         if self.replace_strx64:
-            template["ReplaceStringX64"] = self.replace_strx64
+            template["ReplaceStringX64"] = self.ParseReplaceStrings(self.replace_strx64)
         if self.replace_strx86:
-            template["ReplaceStringX86"] = self.replace_strx86
+            template["ReplaceStringX86"] = self.ParseReplaceStrings(self.replace_strx86)
         return template
 
 class Injection(Base):
@@ -517,61 +540,21 @@ class Injection(Base):
     def __init__(self, 
                  spawn_x64: str = None, 
                  spawn_x86: str = None,
-                 alloc: AllocEnum = None,
-                 execute: ExecuteEnum = None,
-                 arch: Arch = Arch.X64,
                  sysnative: bool = False
                  ) -> None:
         self.sysnative_binary = None
         self.syswow_binary = None
-        self.alloc = None
-        self.execute = None
-
-        if arch == Arch.X86_64:
-            self.syswow_binary = self.Random(Arch.X86_64)
-            self.sysnative_binary = self.Random(Arch.X64)
-        elif arch == Arch.X64:
-            self.sysnative_binary = self.Random(Arch.X64)
-        elif arch == Arch.X86:
-            self.sysnative_binary = self.Random(Arch.X86)
-        else:
-            self.sysnative_binary = self.Random(Arch.X86)
-
-        if spawn_x64:
-            self.spawn_x64 = spawn_x64
-        else:
-            if not sysnative and arch == Arch.X86_64:
-                self.spawn_x64 = self.syswow_binary
-            elif not sysnative and arch == Arch.X64:
-                self.spawn_x64 = self.sysnative_binary
-            else:
-                self.spawn_x64 = self.sysnative_binary
-
-        if spawn_x86:
-            self.spawn_x86 = spawn_x86
-        else:
-            if not sysnative and arch == Arch.X86_64:
-                self.spawn_x86 = self.syswow_binary
-            elif not sysnative and arch == Arch.X86:
-                self.spawn_x86 = self.sysnative_binary
-            else:
-                self.spawn_x86 = self.sysnative_binary
-
-        if alloc:
-            if alloc is AllocEnum.Win32:
-                self.alloc = "Win32"
-            elif alloc is AllocEnum.Syscall:
-                self.alloc = "Native/Syscall"
-            else:
-                self.alloc = "None"
         
-        if execute:
-            if execute is ExecuteEnum.Win32:
-                self.execute = "Win32"
-            elif execute is ExecuteEnum.Syscall:
-                self.execute = "Native/Syscall"
+        if spawn_x64:
+            if sysnative:
+                self.spawn_x64 = self.Random(Arch.X64)
             else:
-                self.execute = "None"
+                self.spawn_x64 = self.Random(Arch.X86_64)
+        if spawn_x86:
+            if sysnative:
+                self.spawn_x86 = self.Random(Arch.X86)
+            else:
+                self.spawn_x86 = self.Random(Arch.X86)
 
     def Random(self, 
                arch: Arch
@@ -601,12 +584,10 @@ class Injection(Base):
 
     def Print(self) -> dict:
         template = {}
-        template["Spawn64"] = self.spawn_x64
-        template["Spawn86"] = self.spawn_x86
-        if self.alloc:
-            template["Alloc"] = self.alloc
-        if self.execute:
-            template["Execute"] = self.execute
+        if self.spawn_x64:
+            template["Spawn64"] = self.spawn_x64
+        if self.spawn_x86:
+            template["Spawn86"] = self.spawn_x86
         return template
 # implant: Implant = None,
 class Demon(Base):
@@ -657,12 +638,11 @@ class Demon(Base):
                 self.proxyloading = proxyloading
             else:
                 self.proxyloading = None
-        if amsietwpatching is "HWBP":
-            self.amsietwpatching = amsietwpatching
+        if amsietwpatching in [ "HWBP" ]:
+            if amsietwpatching is "HWBP":
+                self.amsietwpatching = "Hardware breakpoints"
         if injection:
             self.injection = injection
-        else:
-            self.injection = Injection(None, None)
         if dotnetpipe:
             self.dotnetpipe = dotnetpipe
         if binary:
