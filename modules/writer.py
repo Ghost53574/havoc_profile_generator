@@ -83,17 +83,17 @@ class Writer(Base):
                     if listener_cert:
                         listener_block += f'''
         Cert {{
-            Cert = "{listener_cert["Cert"]}"
-            Key  = "{listener_cert["Key"]}"
+            Cert = "{listener_cert.get("Cert")}"
+            Key  = "{listener_cert.get("Key")}"
         }}
 '''
                     if listener_proxy:
                         listener_block += f'''
         Proxy {{
-            Host     = "{listener_proxy["Host"]}"
-            Port     = {listener_proxy["Port"]}
-            Username = "{listener_proxy["Username"]}"
-            Password = "{listener_proxy["Password"]}"
+            Host     = "{listener_proxy.get("Host")}"
+            Port     = {listener_proxy.get("Port")}
+            Username = "{listener_proxy.get("Username")}"
+            Password = "{listener_proxy.get("Password")}"
         }}
 '''
                     listener_block += f'''
@@ -127,8 +127,8 @@ class Writer(Base):
         listener_block += "}\n"
 
         if service:
-            service_endpoint = service["Endpoint"]
-            service_password = service["Password"]
+            service_endpoint = service.get("Endpoint")
+            service_password = service.get("Password")
 
             if service_endpoint and service_password:
                 service_block = f"""Service {{
@@ -140,40 +140,49 @@ class Writer(Base):
                 service_block = None
         else:
             service_block = None
-        # Fix representation of Sleep and other values in the Demon build profile
-        demon_sleep = demon["Sleep"]
-        demon_jitter = demon["Jitter"]
+
+        demon_sleep = demon.get("Sleep")
+        demon_jitter = demon.get("Jitter")
+        demon_indirectsyscall = demon.get("IndirectSyscall")
+        demon_stackduplication = demon.get("StackDuplication")
+        demon_sleeptechnique = demon.get("SleepTechnique")
+        demon_proxyloading = demon.get("ProxyLoading")
+        demon_amsietwpatching = demon.get("AmsiEtwPatching")
+        demon_dotnetnamepipe = demon.get("DotNetNamePipe")
         demon_xforwardedfor = demon.get("TrustXForwardedFor")
-        demon_implant = demon.get("Implant")
-        if demon_implant:
-            demon_implant_sleepmask = demon_implant.get("SleepMask")
-            demon_implant_sleepteq  = demon_implant.get("SleepMaskTechnique")
+
         demon_binary = demon.get("Binary")
         if demon_binary:
-            demon_binary_magicmzx64 = demon_binary["Header"].get("MagicMzX64")
-            demon_binary_magicmzx86 = demon_binary["Header"].get("MagicMzX86")
+            demon_binary_header = demon_binary.get("Header")
+            demon_binary_magicmzx64 = demon_binary_header.get("MagicMzX64")
+            demon_binary_magicmzx86 = demon_binary_header.get("MagicMzX86")
+            demon_binary_compiletime = demon_binary_header.get("CompileTime")
+            demon_binary_imagesizex64 = demon_binary_header.get("ImageSizeX64")
+            demon_binary_imagesizex86 = demon_binary_header.get("ImageSizeX86")
+            demon_binary_replacestrx64 = demon_binary.get("ReplaceStringsX64")
+            demon_binary_replacestrx86 = demon_binary.get("ReplaceStringsX86")
+        
         demon_injection = demon["Injection"]
-        injection_spawn64 = demon_injection["Spawn64"]
-        injection_spawn32 = demon_injection["Spawn86"]
+        if demon_injection:
+            injection_spawn64 = demon_injection.get("Spawn64")
+            injection_spawn32 = demon_injection.get("Spawn86")
         demon_block = f"""Demon {{
     Sleep  = {demon_sleep}
-    Jitter = {demon_jitter}"""
-        if demon_xforwardedfor:
-            demon_block += f"""
-    TrustXForwardedFor = "{demon_xforwardedfor}" 
+    Jitter = {demon_jitter}
 """
-        if demon_implant:
-            demon_block += f"""
-    Implant {{"""
-            if demon_implant_sleepmask:
-                demon_block += f"""
-        SleepMask = {demon_implant_sleepmask}"""
-            if demon_implant_sleepteq:
-                demon_block += f"""
-        SleepMaskTechnique = "{demon_implant_sleepteq}" """
-            demon_block += f"""
-    }}
-"""
+        if demon_indirectsyscall:
+            demon_block += f"    IndirectSyscall = \"{demon_indirectsyscall}\""
+        if demon_stackduplication:
+            demon_block += f"    StackDuplication = \"{demon_stackduplication}\""
+        if demon_sleeptechnique:
+            demon_block += f"    SleepTechnique = \"{demon_sleeptechnique}\""
+        if demon_proxyloading:
+            demon_block += f"    ProxyLoading = \"{demon_proxyloading}\""
+        if demon_amsietwpatching:
+            demon_block += f"    AmsiEtwPatching = \"{demon_amsietwpatching}\""
+        if demon_dotnetnamepipe:
+            demon_block += f"    DotNetNamePipe = \"{demon_dotnetnamepipe}\""
+
         if demon_binary and (demon_binary_magicmzx64 or demon_binary_magicmzx86):
             demon_block += f"""
     Binary {{
@@ -183,17 +192,35 @@ class Writer(Base):
                 demon_block += f"            MagicMzX64 = \"{demon_binary_magicmzx64}\""
             if demon_binary_magicmzx86:
                 demon_block += f"            MagicMzX64 = \"{demon_binary_magicmzx86}\""
+            if demon_binary_compiletime:
+                demon_block += f"            CompileTime = \"{demon_binary_compiletime}\""
+            if demon_binary_imagesizex64:
+                demon_block += f"            ImageSizeX64 = \"{demon_binary_imagesizex64}\""
+            if demon_binary_imagesizex86:
+                demon_block += f"            ImageSizeX86 = \"{demon_binary_imagesizex86}\""
+            if demon_binary_replacestrx64:
+                demon_block += f"            ReplaceStringsX64 = \"{demon_binary_replacestrx64}\""
+            if demon_binary_replacestrx86:
+                demon_block += f"            ReplaceStringsX86 = \"{demon_binary_replacestrx86}\""
             demon_block += f"""
         }}
     }}
 """
         demon_block += f"""
-    Injection {{
-        Spawn64 = "{injection_spawn64}"
+    Injection {{"""
+        if injection_spawn64:
+            demon_block += f"""
+        Spawn64 = "{injection_spawn64}" """
+        if injection_spawn32:
+            demon_block += f"""
         Spawn32 = "{injection_spawn32}" """
         demon_block += f"""
     }}
 }}"""
+        if demon_xforwardedfor:
+            demon_block += f"""
+    TrustXForwardedFor = "{demon_xforwardedfor}" 
+"""
         profile_block = teamserver_block + operator_block + listener_block
         if service_block:
             profile_block += service_block

@@ -5,14 +5,6 @@ class Arch(Enum):
     X64 = 1
     X86_64 = 3
 
-class AllocEnum(Enum):
-    Win32 = 0
-    Syscall = 1
-
-class ExecuteEnum(Enum):
-    Win32 = 0
-    Syscall = 1
-
 class SleepObfEnum(Enum):
     No_Obf = 0
     Ekko = 1

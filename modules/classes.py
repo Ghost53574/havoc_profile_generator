@@ -1,5 +1,6 @@
 from . import util
 from . import enum
+from . import defaults
 
 from faker import Factory
 import random
@@ -10,70 +11,6 @@ Faker = Factory.create
 fake = Faker()
 
 Arch = enum.Arch
-AllocEnum = enum.AllocEnum
-ExecuteEnum = enum.ExecuteEnum
-
-search_path = os.environ['PATH']
-windows_dir_root = "C:\\\\Windows"
-windows_dir_sysnative = "\\System32"
-windows_dir_syswow64 = "\\SysWow64"
-
-# Default profile settings
-all_interfaces = "0.0.0.0"
-localhost = "127.0.0.1"
-default_port = 40056
-default_user_agent = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36"
-default_response = [ "Content-type: text/plain; charset=utf-8", "Connection: keep-alive", "Cache-control: non-cache" ]
-default_headers = [ "Content-type: text/plain; charset=utf-8", "Accept-Language: en-US" ]
-default_urls = [ "/images/dog.jpg", "/images/cat.jpg", "/images/dolphin.jpg" ]
-
-# Default files needed
-default_compiler_x64 = "x86_64-w64-mingw32-gcc"
-default_compiler_x86 = "i686-w64-mingw32-gcc"
-default_assembler = "nasm"
-
-# Default OPSEC safer programs to spawn to
-default_spawnto_opsec = {
-    "gpupdate": "gpupdate.exe /Target:User /Sync /Force",
-    "werfault": "Werfault.exe",
-    "svchost": "svchost.exe -k netsvcs",
-    "dashost": "dasHost.exe ",
-    "dllhost": "dllhost.exe /PROCESSID:",
-    "conhost": "conhost.exe 0x4",
-    "taskhostw": "taskhostw.exe"
-}
-
-default_spawnto_only_sysnative = [
-    "dashost",
-    "taskhostw",
-    "conhost"
-]
-
-default_spawnto_all = [
-    "gpupdate",
-    "werfault",
-    "svchost",
-    "dashost",
-    "dllhost",
-    "conhost",
-    "taskhostw"
-]
-
-default_pipenames = [
-    "winsock",
-    "mojo",
-    "crashpad",
-    "chromesync",
-    "gecko",
-    "guid",
-    "chrome",
-    "discord",
-    "shellex",
-    "pshost",
-    "tcppipe",
-    "ntsvcs",
-    "trkwks"
-]
 
 class Base:
     def Find(self, 
@@ -82,7 +19,7 @@ class Base:
         if _search_path:
             paths = _search_path
         else:
-            paths = search_path.split(":")
+            paths = defaults.search_path.split(":")
         for path in paths: 
             for root, _, files in os.walk(path):
                 if name in files:
@@ -103,21 +40,21 @@ class Build(Base):
         if compiler_64:
             self.compiler_64 = compiler_64
         else:
-            self.compiler_64 = self.Find(default_compiler_x64)
+            self.compiler_64 = self.Find(defaults.default_compiler_x64)
             if not self.compiler_64:
-                util.print_fail(f"Cannot find {default_compiler_x64}")
+                util.print_fail(f"Cannot find {defaults.default_compiler_x64}")
         if compiler_86:
             self.compiler_86 = compiler_86
         else:
-            self.compiler_86 = self.Find(default_compiler_x86)
+            self.compiler_86 = self.Find(defaults.default_compiler_x86)
             if not self.compiler_86:
-                util.print_fail(f"Cannot find {default_compiler_x86}")
+                util.print_fail(f"Cannot find {defaults.default_compiler_x86}")
         if compiler_nasm:
             self.compiler_nasm = compiler_nasm
         else:
-            self.compiler_nasm = self.Find(default_assembler)
+            self.compiler_nasm = self.Find(defaults.default_assembler)
             if not self.compiler_nasm:
-                util.print_fail(f"Cannot find {default_assembler}")
+                util.print_fail(f"Cannot find {defaults.default_assembler}")
             
     def Print(self) -> dict:
         template = {}
@@ -145,8 +82,8 @@ class Teamserver(Base):
         self.build = None
 
         if not host or not port:
-            self.host = all_interfaces
-            self.port = default_port
+            self.host = defaults.all_interfaces
+            self.port = defaults.default_port
 
         if build:
             self.build = build
@@ -297,7 +234,7 @@ class Http_Listener(Cert, Base):
         if user_agent:
             self.user_agent = user_agent
         else:
-            self.user_agent = default_user_agent
+            self.user_agent = defaults.default_user_agent
         if headers:
             self.headers = headers
         else:
@@ -386,7 +323,7 @@ class Smb_Listener(Cert, Base):
         else:
             temp = ""
             while not temp:
-                temp = util.generate_pipename(None, None, random.choice(default_pipenames))
+                temp = util.generate_pipename(None, None, random.choice(defaults.default_pipenames))
             if temp:
                 self.pipename = temp
             else:
@@ -560,20 +497,20 @@ class Injection(Base):
                arch: Arch
                ) -> str:
         if arch == Arch.X64 or arch == Arch.X86:
-            windows_dir = f"{windows_dir_root}\\{windows_dir_sysnative}\\"
+            windows_dir = f"{defaults.windows_dir_root}\\{defaults.windows_dir_sysnative}\\"
         elif arch == Arch.X86_64:
-            windows_dir = f"{windows_dir_root}\\{windows_dir_syswow64}\\"
+            windows_dir = f"{defaults.windows_dir_root}\\{defaults.windows_dir_syswow64}\\"
         else:
             return None
 
         prog = None
         
         if arch == Arch.X86_64:
-            prog = random.choice(default_spawnto_all)
+            prog = random.choice(defaults.default_spawnto_all)
         else:
-            prog = random.choice(default_spawnto_only_sysnative)
+            prog = random.choice(defaults.default_spawnto_only_sysnative)
 
-        spawn_to = f"{windows_dir}\\{default_spawnto_opsec[prog]}"
+        spawn_to = f"{windows_dir}\\{defaults.default_spawnto_opsec[prog]}"
 
         if prog == "dashost":
             spawn_to = f"{spawn_to}{util.generate_dashost_pid()}"

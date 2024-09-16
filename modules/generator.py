@@ -1,6 +1,7 @@
 from . import classes
 from . import util
 from . import enum
+from . import defaults
 
 from faker import Factory
 import random
@@ -27,38 +28,6 @@ Header     = classes.Header
 Service    = classes.Service
 
 Arch = enum.Arch
-AllocEnum = enum.AllocEnum
-ExecuteEnum = enum.ExecuteEnum
-
-# Default profile settings
-all_interfaces = "0.0.0.0"
-localhost = "127.0.0.1"
-default_port = 40056
-default_user_agent = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36"
-default_response = [ "Content-type: text/plain; charset=utf-8", "Connection: keep-alive", "Cache-control: non-cache" ]
-default_headers = [ "Content-type: text/plain; charset=utf-8", "Accept-Language: en-US" ]
-default_urls = [ "/images/dog.jpg", "/images/cat.jpg", "/images/dolphin.jpg" ]
-
-# Default files needed
-default_compiler_x64 = "x86_64-w64-mingw32-gcc"
-default_compiler_x86 = "i686-w64-mingw32-gcc"
-default_assembler = "nasm"
-
-default_pipenames = [
-    "winsock",
-    "mojo",
-    "crashpad",
-    "chromesync",
-    "gecko",
-    "guid",
-    "chrome",
-    "discord",
-    "shellex",
-    "pshost",
-    "tcppipe",
-    "ntsvcs",
-    "trkwks"
-]
 
 default_http_listener_name = "Agent Listener - HTTP"
 default_https_listener_name = "Agent Listener - HTTP/s"
@@ -74,12 +43,12 @@ default_http_listener = Http_Listener(name=default_http_listener_name,
                                           workinghours=None,
                                           secure="false",
                                           host_rotation=None,
-                                          user_agent=default_user_agent,
-                                          headers=default_headers,
-                                          urls=default_urls,
+                                          user_agent=defaults.default_user_agent,
+                                          headers=defaults.default_headers,
+                                          urls=defaults.default_urls,
                                           cert=None,
                                           proxy=None,
-                                          response=default_response)
+                                          response=defaults.default_response)
 
 default_https_listener = Http_Listener(name=default_http_listener_name,
                                           hosts=[ default_listener_host ],
@@ -89,12 +58,12 @@ default_https_listener = Http_Listener(name=default_http_listener_name,
                                           workinghours=None,
                                           secure="true",
                                           host_rotation=None,
-                                          user_agent=default_user_agent,
-                                          headers=default_headers,
-                                          urls=default_urls,
+                                          user_agent=defaults.default_user_agent,
+                                          headers=defaults.default_headers,
+                                          urls=defaults.default_urls,
                                           cert=None,
                                           proxy=None,
-                                          response=default_response)
+                                          response=defaults.default_response)
 
 default_smb_listener = Smb_Listener(default_smb_listener_name)
 
@@ -200,32 +169,32 @@ class Profile():
             service_block = self.config.get("service")
             demon_block = self.config.get("demon")
         else:
-            teamserver_host = localhost
+            teamserver_host = defaults.localhost
             teamserver_port = util.get_random_port(
                 min_port=int(min_port), 
                 max_port=int(max_port))
             
-            build_compiler_x64 = default_compiler_x64
-            build_compiler_x86 = default_compiler_x86
-            build_assembler = default_assembler
+            build_compiler_x64 = defaults.default_compiler_x64
+            build_compiler_x86 = defaults.default_compiler_x86
+            build_assembler = defaults.default_assembler
 
         if not teamserver_host and not teamserver_port:
-            teamserver_host = localhost
-            teamserver_port = default_port
+            teamserver_host = defaults.localhost
+            teamserver_port = defaults.default_port
         elif not teamserver_host:
-            teamserver_host = localhost
+            teamserver_host = defaults.localhost
         elif not teamserver_port:
-            teamserver_port = default_port
+            teamserver_port = defaults.default_port
         if not build_compiler_x64 and not build_compiler_x86:
-            build_compiler_x64 = default_compiler_x64
-            build_compiler_x86 = default_compiler_x86
+            build_compiler_x64 = defaults.default_compiler_x64
+            build_compiler_x86 = defaults.default_compiler_x86
         elif build_compiler_x86 and not build_compiler_x64:
-            build_compiler_x64 = default_compiler_x64
+            build_compiler_x64 = defaults.default_compiler_x64
         elif build_compiler_x64 and not build_compiler_x86:
-            build_compiler_x86 = default_compiler_x86
+            build_compiler_x86 = defaults.default_compiler_x86
 
         if not build_assembler:
-            build_assembler = default_assembler
+            build_assembler = defaults.default_assembler
 
         build = Build(build_compiler_x64, build_compiler_x86, build_assembler)
         teamserver = Teamserver(teamserver_host, teamserver_port, build)
@@ -285,16 +254,15 @@ class Profile():
             profile_headers = profile_data.get("Headers")
             profile_sleep = profile_data.get("Sleep")
             profile_jitter = profile_data.get("Jitter")
+            profile_indirectsyscall = profile_data.get("IndirectSyscall")
+            profile_stackduplication = profile_data.get("StackDuplication")
+            profile_sleeptechnique = profile_data.get("SleepTechnique") 
+            profile_proxyloading = profile_data.get("ProxyLoading")
+            profile_amsietwpatching = profile_data.get("AmsiEtwPatching")
+            profile_dotnetnamepipe = profile_data.get("DotNetNamePipe")
             profile_xforwardedfor = profile_data.get("TrustXForwardedFor")
             profile_spawnx64 = profile_data.get("Spawnx64")
             profile_spawnx86 = profile_data.get("Spawnx86")
-            profile_indirectsyscall = profile_data.get("IndirectSyscall")
-            profile_stackdup = profile_data.get("StackDuplication")
-            profile_sleep_teq = profile_data.get("SleepTechnique")
-            profile_amsipatch = profile_data.get("AmsiEtwPatching")
-            profile_dotnetpipe = profile_data.get("DotNetNamePipe")
-            profile_alloc = profile_data.get("Alloc")
-            profile_execute = profile_data.get("Execute")
             profile_pipename = profile_data.get("Pipename")
 
         listeners = Listeners()
@@ -305,13 +273,13 @@ class Profile():
             if not port:
                 port = util.get_random_port()
             if not host:
-                host = all_interfaces
+                host = defaults.ll_interfaces
             if not hosts:
                 temp = []
                 number_hosts = random.choice(range(1, 20))
                 for i in range(number_hosts):
                     temp.append(fake.ipv4())
-                if host == all_interfaces:
+                if host == defaults.all_interfaces:
                     for interface in os.listdir("/sys/class/net"):
                         if interface != "lo":
                             temp.append(util.get_ip_address(interface))
@@ -335,25 +303,25 @@ class Profile():
             if profile_user_agent:
                 user_agent = profile_user_agent
             else:
-                user_agent = default_user_agent
+                user_agent = defaults.default_user_agent
             
             headers = None
             if profile_headers:
                 headers = profile_headers
             else:
-                headers = default_headers
+                headers = defaults.default_headers
             
             urls = None
             if profile_request:
                 urls = profile_request
             else:
-                urls = default_urls
+                urls = defaults.default_urls
             
             response = None
             if profile_response:
                 response = profile_response
             else:
-                response = default_response
+                response = defaults.default_response
 
             http_listener = Http_Listener(name=default_http_listener_name,
                                           hosts=hosts,
@@ -413,7 +381,7 @@ class Profile():
                             number_hosts = random.choice(range(1, 20))
                             for i in range(number_hosts):
                                 temp.append(fake.ipv4())
-                            if host == all_interfaces:
+                            if host == defaults.all_interfaces:
                                 for interface in os.listdir("/sys/class/net"):
                                     if interface != "lo":
                                         temp.append(util.get_ip_address(interface))
@@ -425,7 +393,7 @@ class Profile():
                         
                         listener_bind = listener[listener_type].get("bind")
                         if not listener_bind and not host:
-                            listener_bind = all_interfaces
+                            listener_bind = defaults.all_interfaces
                         elif listener_bind and host:
                             listener_bind = host
                         elif not listener_bind and host:
@@ -501,7 +469,7 @@ class Profile():
                     elif listener_type == "smb":
                         listener_pipename = listener[listener_type].get("pipename")
                         if not listener_pipename and (not profile_pipename or profile_pipename == "None"):
-                            listener_pipename = util.generate_pipename(random.choice(default_pipenames))
+                            listener_pipename = util.generate_pipename(random.choice(defaults.default_pipenames))
                         elif not listener_pipename and profile_pipename:
                             listener_pipename = util.generate_pipename(profile_pipename)
                         listener_killdate = listener[listener_type].get("killdate")
@@ -549,16 +517,55 @@ class Profile():
                 demon_sleep = random.choice(range(12, 60))
             elif not demon_sleep and profile_sleep:
                 demon_sleep = profile_sleep
+                
             demon_jitter = dict(demon_block).get("jitter")
             if not demon_jitter and not profile_jitter:
                 demon_jitter = random.choice(range(5, 70))
             elif not demon_jitter and profile_jitter:
                 demon_jitter = profile_jitter
+                
+            demon_indirectsyscall = dict(demon_block).get("indirectsyscall")
+            if not demon_indirectsyscall and not profile_indirectsyscall:
+                demon_indirectsyscall = None
+            elif not demon_indirectsyscall and profile_indirectsyscall:
+                demon_indirectsyscall = profile_indirectsyscall
+                
+            demon_stackduplication = dict(demon_block).get("stackduplication")
+            if not demon_stackduplication and not profile_stackduplication:
+                demon_stackduplication = None
+            elif not demon_stackduplication and profile_stackduplication:
+                demon_stackduplication = profile_stackduplication
+
+            demon_sleeptechnique = dict(demon_block).get("sleeptechnique")
+            if not demon_sleeptechnique and not profile_sleeptechnique:
+                demon_sleeptechnique = None
+            elif not demon_sleeptechnique and profile_sleeptechnique:
+                demon_sleeptechnique = profile_sleeptechnique
+                
+            demon_proxyloading = dict(demon_block).get("proxyloading")
+            if not demon_proxyloading and not profile_proxyloading:
+                demon_proxyloading = None
+            elif not demon_proxyloading and profile_proxyloading:
+                demon_proxyloading = profile_proxyloading
+                
+            demon_amsietwpatching = dict(demon_block).get("amsietwpatching")
+            if not demon_amsietwpatching and not profile_amsietwpatching:
+                demon_amsietwpatching = None
+            elif not demon_amsietwpatching and profile_amsietwpatching:
+                demon_amsietwpatching = profile_amsietwpatching
+                
+            demon_dotnetnamepipe = dict(demon_block).get("dotnetnamepipe")
+            if not demon_dotnetnamepipe and not profile_dotnetnamepipe:
+                demon_dotnetnamepipe = None
+            elif not demon_dotnetnamepipe and profile_dotnetnamepipe:
+                demon_dotnetnamepipe = profile_dotnetnamepipe
+            
             demon_xforwardedfor = dict(demon_block).get("trustxforwardedfor")
             if not demon_xforwardedfor and not profile_xforwardedfor:
                 demon_xforwardedfor = None
             elif not demon_xforwardedfor and profile_xforwardedfor:
                 demon_xforwardedfor = profile_xforwardedfor
+                
             demon_binary = dict(demon_block).get("binary")
             if not demon_binary:
                 demon_binary = None
@@ -567,11 +574,17 @@ class Profile():
                 if demon_binary_header:
                     demon_binary_magicmzx64 = demon_binary_header.get("magicmzx64")
                     demon_binary_magicmzx86 = demon_binary_header.get("magicmzx86")
+                    demon_binary_compiletime = demon_binary_header.get("compiletime")
+                    demon_binary_imagesizex64 = demon_binary_header.get("imagesizex64")
+                    demon_binary_imagesizex86 = demon_binary_header.get("imagesizex86")
                     if demon_binary_magicmzx64 or demon_binary_magicmzx86:
                         demon_binary = Binary(
                                         Header(
                                         MagicMzX64=demon_binary_magicmzx64,
-                                        MagicMzX86=demon_binary_magicmzx86
+                                        MagicMzX86=demon_binary_magicmzx86,
+                                        CompileTime=demon_binary_compiletime,
+                                        ImageSizeX64=demon_binary_imagesizex64,
+                                        ImageSizeX86=demon_binary_imagesizex86
                                         ))
                     if type(demon_binary) is not Binary:
                         demon_binary = None
@@ -605,6 +618,12 @@ class Profile():
                                         sysnative=sysnative)
             demon = Demon(sleep=demon_sleep,
                           jitter=demon_jitter,
+                          indirectsyscall=demon_indirectsyscall,
+                          stackduplication=demon_stackduplication,
+                          sleepteq=demon_sleeptechnique,
+                          proxyloading=demon_proxyloading,
+                          amsietwpatching=demon_amsietwpatching,
+                          dotnetpipe=demon_dotnetnamepipe,
                           xforwardedfor=demon_xforwardedfor,
                           binary=demon_binary,
                           injection=demon_injection)

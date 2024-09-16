@@ -159,7 +159,7 @@ def get_random_port(
     else:
         return port
     
-def load_profiles() -> (list, dict):
+def load_profiles() -> tuple[list, dict]:
     if not os.path.isdir(profile_dir):
         return None
     for _, _, files in os.walk(profile_dir):
