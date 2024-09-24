@@ -14,6 +14,9 @@ default_response = [ "Content-type: text/plain; charset=utf-8", "Connection: kee
 default_headers = [ "Content-type: text/plain; charset=utf-8", "Accept-Language: en-US" ]
 default_urls = [ "/images/dog.jpg", "/images/cat.jpg", "/images/dolphin.jpg" ]
 
+default_sleep_time = 10
+default_jitter_percentage = 15
+
 # Default files needed
 default_compiler_x64 = "x86_64-w64-mingw32-gcc"
 default_compiler_x86 = "i686-w64-mingw32-gcc"
