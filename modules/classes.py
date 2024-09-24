@@ -457,8 +457,8 @@ class Binary(Base):
     def ParseReplaceStrings(
         replacement_strings: dict
         ) -> str:
-        ""
-
+        return str(replacement_strings)
+    
     def Print(self) -> str:
         template = {}
         if self.header:
@@ -526,7 +526,7 @@ class Injection(Base):
         if self.spawn_x86:
             template["Spawn86"] = self.spawn_x86
         return template
-# implant: Implant = None,
+
 class Demon(Base):
     def __init__(self,
                  sleep: int,
@@ -556,11 +556,11 @@ class Demon(Base):
         if sleep:
             self.sleep = sleep
         else:
-            self.sleep = 10
+            self.sleep = default.sleep_time
         if jitter:
             self.jitter = jitter
         else:
-            self.jitter = 15
+            self.jitter = default.jitter_percentage
         if indirectsyscall:
             self.indirectsyscall = indirectsyscall
         if stackduplication:
