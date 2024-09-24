@@ -556,11 +556,11 @@ class Demon(Base):
         if sleep:
             self.sleep = sleep
         else:
-            self.sleep = default.sleep_time
+            self.sleep = defaults.default_sleep_time
         if jitter:
             self.jitter = jitter
         else:
-            self.jitter = default.jitter_percentage
+            self.jitter = defaults.default_jitter_percentage
         if indirectsyscall:
             self.indirectsyscall = indirectsyscall
         if stackduplication:
