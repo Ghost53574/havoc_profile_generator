@@ -157,7 +157,10 @@ class Profile():
             self.profile = random.choice(profile_names)
 
         if config:
-            self.config = json.loads("".join(config))
+            try:
+                self.config = json.loads("".join(config))
+            except Exception as e:
+                print(f"Malformed JSON config input detected: {e}")
 
             teamserver_host = self.config.get("ts_host")
             teamserver_port = self.config.get("ts_port")
@@ -197,10 +200,15 @@ class Profile():
             build_assembler = defaults.default_assembler
 
         build = Build(build_compiler_x64, build_compiler_x86, build_assembler)
+        if not build:
+            util.print_fail("Build output failed")
+            exit(1)
         teamserver = Teamserver(teamserver_host, teamserver_port, build)
+        if not teamserver:
+            util.print_fail("Teamserver output failed")
+            exit(1)
         if not quiet:
             util.print_good("Teamserver built")
-
         if not operator_block:
             operators = Operators()
             random_uesrname = fake.user_name()
@@ -627,6 +635,10 @@ class Profile():
                           xforwardedfor=demon_xforwardedfor,
                           binary=demon_binary,
                           injection=demon_injection)
+            
+        if not demon:
+            util.print_fail("Demon output failed")
+            exit(1)
         
         self.generator = Generator(teamserver=teamserver, 
                                    operators=operators, 
