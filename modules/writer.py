@@ -134,8 +134,7 @@ class Writer(Base):
                 service_block = f"""Service {{
     Endpoint = "{service_endpoint}"
     Password = "{service_password}"
-}}
-"""
+}}"""
             else:
                 service_block = None
         else:
@@ -176,6 +175,22 @@ class Writer(Base):
             demon_block += f"    ProxyLoading = \"{demon_proxyloading}\""
         if demon_amsietwpatching:
             demon_block += f"    AmsiEtwPatching = \"{demon_amsietwpatching}\""
+
+        demon_injection = demon["Injection"]
+        if demon_injection:
+            injection_spawn64 = demon_injection.get("Spawn64")
+            injection_spawn32 = demon_injection.get("Spawn86")
+        demon_block += f"""
+    ProcessInjection {{"""
+        if injection_spawn64:
+            demon_block += f"""
+        Spawn64 = "{injection_spawn64}" """
+        if injection_spawn32:
+            demon_block += f"""
+        Spawn32 = "{injection_spawn32}" """
+        demon_block += f"""
+    }}"""
+
         if demon_dotnetnamepipe:
             demon_block += f"    DotNetNamePipe = \"{demon_dotnetnamepipe}\""
 
@@ -194,34 +209,18 @@ class Writer(Base):
                 demon_block += f"            ImageSizeX64 = \"{demon_binary_imagesizex64}\""
             if demon_binary_imagesizex86:
                 demon_block += f"            ImageSizeX86 = \"{demon_binary_imagesizex86}\""
-            if demon_binary_replacestrx64:
-                demon_block += f"            ReplaceStringsX64 = \"{demon_binary_replacestrx64}\""
-            if demon_binary_replacestrx86:
-                demon_block += f"            ReplaceStringsX86 = \"{demon_binary_replacestrx86}\""
             demon_block += f"""
-        }}
-    }}
-    
-"""
-        demon_injection = demon["Injection"]
-        if demon_injection:
-            injection_spawn64 = demon_injection.get("Spawn64")
-            injection_spawn32 = demon_injection.get("Spawn86")
+        }}"""
+        if demon_binary_replacestrx64:
+            demon_block += f"            ReplaceStringsX64 = \"{demon_binary_replacestrx64}\""
+        if demon_binary_replacestrx86:
+            demon_block += f"            ReplaceStringsX86 = \"{demon_binary_replacestrx86}\""
         demon_block += f"""
-    Injection {{"""
-        if injection_spawn64:
-            demon_block += f"""
-        Spawn64 = "{injection_spawn64}" """
-        if injection_spawn32:
-            demon_block += f"""
-        Spawn32 = "{injection_spawn32}" """
-        demon_block += f"""
-    }}
-}}"""
+    }}"""
         if demon_xforwardedfor:
             demon_block += f"""
-    TrustXForwardedFor = "{demon_xforwardedfor}" 
-"""
+    TrustXForwardedFor = "{demon_xforwardedfor}"
+}}"""
         profile_block = teamserver_block + operator_block + listener_block
         if service_block:
             profile_block += service_block
