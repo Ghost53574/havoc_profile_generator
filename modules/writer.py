@@ -162,10 +162,6 @@ class Writer(Base):
             demon_binary_replacestrx64 = demon_binary.get("ReplaceStringsX64")
             demon_binary_replacestrx86 = demon_binary.get("ReplaceStringsX86")
         
-        demon_injection = demon["Injection"]
-        if demon_injection:
-            injection_spawn64 = demon_injection.get("Spawn64")
-            injection_spawn32 = demon_injection.get("Spawn86")
         demon_block = f"""Demon {{
     Sleep  = {demon_sleep}
     Jitter = {demon_jitter}
@@ -205,7 +201,12 @@ class Writer(Base):
             demon_block += f"""
         }}
     }}
+    
 """
+        demon_injection = demon["Injection"]
+        if demon_injection:
+            injection_spawn64 = demon_injection.get("Spawn64")
+            injection_spawn32 = demon_injection.get("Spawn86")
         demon_block += f"""
     Injection {{"""
         if injection_spawn64:
