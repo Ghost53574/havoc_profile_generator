@@ -239,11 +239,11 @@ class Profile():
         profile_spawnx64 = None
         profile_spawnx86 = None
         profile_indirectsyscall = None
-        profile_stackdup = None
-        profile_sleep_teq = None
+        profile_stackduplication = None
+        profile_sleeptechnique = None
         profile_proxyloading = None
         profile_amsietwpatching = None
-        profile_dotnetpipe = None
+        profile_dotnetnamepipe = None
         profile_pipename = None
         profile_xforwardedfor = None
 
