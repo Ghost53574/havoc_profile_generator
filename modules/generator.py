@@ -37,7 +37,8 @@ default_listener_host = os.listdir("/sys/class/net")[0]
 
 default_http_listener = Http_Listener(name=default_http_listener_name,
                                           hosts=[ default_listener_host ],
-                                          port="80",
+                                          port_bind="80",
+                                          port_conn=None,
                                           host_bind=default_listener_host,
                                           killswitch=None,
                                           workinghours=None,
@@ -52,7 +53,8 @@ default_http_listener = Http_Listener(name=default_http_listener_name,
 
 default_https_listener = Http_Listener(name=default_http_listener_name,
                                           hosts=[ default_listener_host ],
-                                          port="443",
+                                          port_bind="443",
+                                          port_conn=None,
                                           host_bind=default_listener_host,
                                           killswitch=None,
                                           workinghours=None,
@@ -281,7 +283,7 @@ class Profile():
             if not port:
                 port = util.get_random_port()
             if not host:
-                host = defaults.ll_interfaces
+                host = defaults.all_interfaces
             if not hosts:
                 temp = []
                 number_hosts = random.choice(range(1, 20))
@@ -363,7 +365,7 @@ class Profile():
                                           proxy=None,
                                           response=response)
             listeners.Add_Http_Listener(https_listener)
-            listeners.Add_Smb_Listener(default_smb_listener_name)
+            listeners.Add_Smb_Listener(default_smb_listener)
         else:
             for listener in listeners_block:
                 for listener_type in listener.keys():
