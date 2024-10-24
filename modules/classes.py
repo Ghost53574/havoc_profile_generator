@@ -16,14 +16,19 @@ class Base:
     def Find(self, 
              name: str,
             _search_path: str = None):
-        if _search_path:
-            paths = _search_path
-        else:
-            paths = defaults.search_path.split(":")
-        for path in paths: 
-            for root, _, files in os.walk(path):
-                if name in files:
-                    return os.path.join(root, name)
+        try:
+            import shutil
+            return shutil.which(name)
+        except:
+            if _search_path:
+                paths = _search_path
+            else:
+                paths = defaults.search_path.split(":")
+            for path in paths: 
+                for root, _, files in os.walk(path):
+                    print(root, files)
+                    if name in files:
+                        return os.path.join(root, name)
                 
     def Get(self) -> object:
         return self
@@ -481,6 +486,8 @@ class Injection(Base):
                  ) -> None:
         self.sysnative_binary = None
         self.syswow_binary = None
+        self.spawn_x64 = None
+        self.spawn_x86 = None
         
         if spawn_x64:
             if sysnative:
@@ -492,6 +499,7 @@ class Injection(Base):
                 self.spawn_x86 = self.Random(Arch.X86)
             else:
                 self.spawn_x86 = self.Random(Arch.X86)
+
 
     def Random(self, 
                arch: Arch
@@ -576,7 +584,7 @@ class Demon(Base):
             else:
                 self.proxyloading = None
         if amsietwpatching in [ "HWBP" ]:
-            if amsietwpatching is "HWBP":
+            if amsietwpatching == "HWBP":
                 self.amsietwpatching = "Hardware breakpoints"
         if injection:
             self.injection = injection
