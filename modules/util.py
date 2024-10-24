@@ -5,8 +5,6 @@ import math
 import json
 import random
 import datetime
-import struct
-import fcntl
 import socket
 from OpenSSL import crypto, SSL
 from faker import Factory
@@ -52,12 +50,7 @@ def str_to_bool(value):
     raise ValueError(f'{value} is not a valid boolean value')
 
 def get_ip_address(ifname):
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    return socket.inet_ntoa(fcntl.ioctl(
-        s.fileno(),
-        0x8915,  # SIOCGIFADDR
-        struct.pack('256s', ifname[:15])
-    )[20:24])
+    socket.gethostbyname(socket.gethostname())
 
 def generate_dashost_pid() -> str:
     id = uuid.uuid4().urn[9:].split("-")
