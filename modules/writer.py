@@ -149,6 +149,8 @@ class Writer(Base):
         demon_amsietwpatching = demon.get("AmsiEtwPatching")
         demon_dotnetnamepipe = demon.get("DotNetNamePipe")
         demon_xforwardedfor = demon.get("TrustXForwardedFor")
+        demon_binary_replacestrx64 = None
+        demon_binary_replacestrx86 = None
 
         demon_binary = demon.get("Binary")
         if demon_binary:
@@ -161,7 +163,8 @@ class Writer(Base):
             demon_binary_replacestrx64 = demon_binary.get("ReplaceStringsX64")
             demon_binary_replacestrx86 = demon_binary.get("ReplaceStringsX86")
         
-        demon_block = f"""Demon {{
+        demon_block = f"""
+Demon {{
     Sleep  = {demon_sleep}
     Jitter = {demon_jitter}
 """
@@ -177,49 +180,55 @@ class Writer(Base):
             demon_block += f"    AmsiEtwPatching = \"{demon_amsietwpatching}\""
 
         demon_injection = demon["Injection"]
+        injection_spawn64 = None
+        injection_spawn86 = None
+
         if demon_injection:
             injection_spawn64 = demon_injection.get("Spawn64")
-            injection_spawn32 = demon_injection.get("Spawn86")
-        demon_block += f"""
-    ProcessInjection {{"""
-        if injection_spawn64:
+            injection_spawn86 = demon_injection.get("Spawn86")
             demon_block += f"""
-        Spawn64 = "{injection_spawn64}" """
-        if injection_spawn32:
+        ProcessInjection {{"""
+            if injection_spawn64:
+                demon_block += f"""
+            Spawn64 = "{injection_spawn64}" """
+            if injection_spawn86:
+                demon_block += f"""
+            Spawn86 = "{injection_spawn86}" """
             demon_block += f"""
-        Spawn32 = "{injection_spawn32}" """
-        demon_block += f"""
-    }}"""
+        }}"""
 
         if demon_dotnetnamepipe:
             demon_block += f"    DotNetNamePipe = \"{demon_dotnetnamepipe}\""
 
         if demon_binary and (demon_binary_magicmzx64 or demon_binary_magicmzx86):
             demon_block += f"""
-    Binary {{
+    Binary {{"""
+            if demon_binary_header:
+                demon_block += f"""
         Header {{
 """
-            if demon_binary_magicmzx64:
-                demon_block += f"            MagicMzX64 = \"{demon_binary_magicmzx64}\""
-            if demon_binary_magicmzx86:
-                demon_block += f"            MagicMzX64 = \"{demon_binary_magicmzx86}\""
-            if demon_binary_compiletime:
-                demon_block += f"            CompileTime = \"{demon_binary_compiletime}\""
-            if demon_binary_imagesizex64:
-                demon_block += f"            ImageSizeX64 = \"{demon_binary_imagesizex64}\""
-            if demon_binary_imagesizex86:
-                demon_block += f"            ImageSizeX86 = \"{demon_binary_imagesizex86}\""
-            demon_block += f"""
+                if demon_binary_magicmzx64:
+                    demon_block += f"            MagicMzX64 = \"{demon_binary_magicmzx64}\""
+                if demon_binary_magicmzx86:
+                    demon_block += f"            MagicMzX64 = \"{demon_binary_magicmzx86}\""
+                if demon_binary_compiletime:
+                    demon_block += f"            CompileTime = \"{demon_binary_compiletime}\""
+                if demon_binary_imagesizex64:
+                    demon_block += f"            ImageSizeX64 = \"{demon_binary_imagesizex64}\""
+                if demon_binary_imagesizex86:
+                    demon_block += f"            ImageSizeX86 = \"{demon_binary_imagesizex86}\""
+                demon_block += f"""
         }}"""
-        if demon_binary_replacestrx64:
-            demon_block += f"            ReplaceStringsX64 = \"{demon_binary_replacestrx64}\""
-        if demon_binary_replacestrx86:
-            demon_block += f"            ReplaceStringsX86 = \"{demon_binary_replacestrx86}\""
-        demon_block += f"""
+            if demon_binary_replacestrx64:
+                demon_block += f"            ReplaceStringsX64 = \"{demon_binary_replacestrx64}\""
+            if demon_binary_replacestrx86:
+                demon_block += f"            ReplaceStringsX86 = \"{demon_binary_replacestrx86}\""
+            demon_block += f"""
     }}"""
         if demon_xforwardedfor:
             demon_block += f"""
-    TrustXForwardedFor = "{demon_xforwardedfor}"
+    TrustXForwardedFor = "{demon_xforwardedfor}"""
+        demon_block += f"""
 }}"""
         profile_block = teamserver_block + operator_block + listener_block
         if service_block:
