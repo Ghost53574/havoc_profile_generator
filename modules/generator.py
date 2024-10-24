@@ -33,7 +33,10 @@ default_http_listener_name = "Agent Listener - HTTP"
 default_https_listener_name = "Agent Listener - HTTP/s"
 default_smb_listener_name = "Pivot - Smb"
 
-default_listener_host = os.listdir("/sys/class/net")[0]
+if platform == "Linux":
+    default_listener_host = os.listdir("/sys/class/net")[0]
+elif platform == "Windows":
+    default_listener_host = [[a[0].get("addr") for _,a in z.items()] for z in [netifaces.ifaddresses(y) for y in [x for x in netifaces.interfaces()]]]
 
 default_http_listener = Http_Listener(name=default_http_listener_name,
                                           hosts=[ default_listener_host ],
